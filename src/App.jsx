@@ -151,6 +151,25 @@ export default function App() {
     if (lyrics?.title && lyrics.text !== "Carregando letra...") loadMusicVideo();
   }, [lyrics?.title, lyrics?.artist, lyrics?.text]);
 
+  useEffect(() => {
+    const openFromAddress = () => {
+      const params = new URLSearchParams(window.location.search);
+      const title = params.get("title");
+      const artist = params.get("artist");
+      if (title && artist) {
+        openLyrics({ id: "itunes-direct", title, artist });
+      } else {
+        setLyrics(null);
+        setVideo(null);
+        setVideoError("");
+        setLyricsLoading(false);
+      }
+    };
+    if (new URLSearchParams(window.location.search).has("title") && new URLSearchParams(window.location.search).has("artist")) openFromAddress();
+    window.addEventListener("popstate", openFromAddress);
+    return () => window.removeEventListener("popstate", openFromAddress);
+  }, []);
+
   const visibleChart = useMemo(() => chart.slice(0, 10), [chart]);
   const toggleSaved = (item) => { setSaved((old) => { const next = old.some((x) => x.id === item.id) ? old.filter((x) => x.id !== item.id) : [...old, item]; const token = window.localStorage.getItem("somletra_token"); if (token) fetch("/api/account/favorites", { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ favorites: next }) }).then(async (r) => { if (!r.ok) { const d = await r.json(); setMessage(d.error || "Não foi possível sincronizar os favoritos."); } }).catch(() => setMessage("Não foi possível sincronizar os favoritos.")); else setMessage("Entre em Meus Dados para manter seus favoritos salvos na conta."); return next; }); };
   const submitAuth = async (event) => { event.preventDefault(); setAuthBusy(true); setAuthError(""); try { const response = await fetch(authMode === "register" ? "/api/auth/register" : "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: authName, email: authEmail, password: authPassword }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível autenticar."); window.localStorage.setItem("somletra_token", data.token); setAccount(data.user); setSaved(data.user.favorites || []); setAuthPassword(""); } catch (error) { setAuthError(error.message || "Falha ao conectar."); } finally { setAuthBusy(false); } };
@@ -161,6 +180,11 @@ export default function App() {
 ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${item.title || "letra"}.txt`.replace(/[\\\\/:*?"<>|]/g, "-"); document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
 
   const openLyrics = async (item) => {
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.get("title") !== item.title || currentUrl.searchParams.get("artist") !== item.artist) {
+      const params = new URLSearchParams({ title: item.title || "", artist: item.artist || "" });
+      window.history.pushState({ song: true }, "", `?${params.toString()}`);
+    }
     setVideo(null);
     setVideoError("");
     setLyricsLoading(true);
@@ -177,7 +201,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
-  const backToPortal = () => { setLyrics(null); setVideo(null); setVideoError(""); };
+  const backToPortal = () => { window.history.replaceState({}, "", window.location.pathname); setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); };
   const shareCurrentSong = async () => { try { if (navigator.share) await navigator.share({title:lyrics?.title || "Site Músicas", text:`${lyrics?.title || ""} — ${lyrics?.artist || ""}`, url:window.location.href}); else if (navigator.clipboard) await navigator.clipboard.writeText(window.location.href); } catch {} };
   const saveCurrentSong = () => { if (lyrics?.id) toggleSaved({...lyrics, id:lyrics.id, title:lyrics.title, artist:lyrics.artist}); else setMessage("Pesquise esta música no catálogo para adicioná-la aos favoritos."); };
   const downloadCurrentSong = () => {
@@ -246,7 +270,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = (lyrics.title || "letra") + ".pdf".replace(/[\\\\/:*?"<>|]/g, "-");
+    link.download = ((lyrics.title || "letra").replace(/[\\\\/:*?"<>|]/g, "-")) + ".pdf";
     document.body.appendChild(link);
     link.click();
     link.remove();
