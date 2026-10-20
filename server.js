@@ -225,7 +225,7 @@ const server = http.createServer(async (req, res) => {
       const favorites = Array.isArray(body.favorites) ? body.favorites.slice(0, 500).map((item) => ({
         id: String(item.id || "").slice(0, 160), title: String(item.title || "").slice(0, 200),
         artist: String(item.artist || "").slice(0, 200), album: String(item.album || "").slice(0, 200),
-        artworkUrl: /^https:\\/\\//i.test(item.artworkUrl || "") ? String(item.artworkUrl).slice(0, 1000) : ""
+        artworkUrl: String(item.artworkUrl || "").startsWith("https://") ? String(item.artworkUrl).slice(0, 1000) : ""
       })).filter((item) => item.id && item.title) : [];
       const users = await readJsonFile(usersFile, []);
       const index = users.findIndex((item) => item.id === user.id);
