@@ -157,3 +157,33 @@ body,.site-shell{background:#fff;color:#202027}
  .discover .track-card p{font-size:10px}
  .discover .track-card__arrow{width:30px;height:30px;margin-right:9px}
 }
+
+
+/* Ajuste final de hierarquia visual do catálogo */
+.discover .track-grid{display:flex!important;flex-direction:column!important;grid-template-columns:none!important;gap:10px!important;max-width:100%!important}
+.discover .track-card{display:flex!important;flex-direction:row!important;align-items:center!important;width:100%!important;min-height:92px!important;height:auto!important;overflow:hidden!important}
+.discover .track-card__image{position:relative!important;width:72px!important;height:72px!important;min-width:72px!important;flex:0 0 72px!important;margin:10px!important}
+.discover .track-card__body{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:space-between!important;gap:14px!important;flex:1 1 auto!important;min-width:0!important;padding:12px 14px 12px 2px!important}
+.discover .track-card__body>div{min-width:0!important}
+.discover .track-card h3{font-size:15px!important;line-height:1.35!important;overflow-wrap:anywhere!important}
+.discover .track-card p{font-size:13px!important;line-height:1.4!important;overflow-wrap:anywhere!important}
+.discover .track-genre{font-size:10px!important;letter-spacing:.04em!important}
+.discover .track-card__arrow{flex:0 0 38px!important;width:38px!important;height:38px!important;margin:0 2px 0 0!important}
+.discover .filters{width:100%!important}
+.discover .search-box{width:100%!important;max-width:640px!important;min-height:50px!important}
+.discover .search-submit{min-height:36px!important;cursor:pointer!important}
+.discover .search-submit span{display:inline!important}
+.discover .letras-search-link{font-size:13px!important;font-weight:600!important;text-decoration:underline!important}
+.discover .category-list{display:flex!important;flex-wrap:wrap!important;gap:8px!important}
+.discover .category{font-size:12px!important;padding:9px 13px!important;min-height:36px!important}
+@media(max-width:640px){
+ .discover .track-card{min-height:80px!important}
+ .discover .track-card__image{width:54px!important;height:54px!important;min-width:54px!important;flex-basis:54px!important;margin:8px!important}
+ .discover .track-card__body{gap:7px!important;padding-right:8px!important}
+ .discover .track-card h3{font-size:13px!important}
+ .discover .track-card p{font-size:11px!important}
+ .discover .track-card__arrow{flex-basis:30px!important;width:30px!important;height:30px!important}
+ .discover .search-box{min-width:0!important;flex-wrap:wrap!important;height:auto!important;padding:8px!important}
+ .discover .search-box input{min-width:80px!important;flex:1 1 100px!important}
+ .discover .search-submit{font-size:11px!important}
+}
