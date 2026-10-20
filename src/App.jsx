@@ -102,23 +102,21 @@ export default function App() {
         if (!response.ok) throw new Error(data.error || "Falha na pesquisa.");
         if (active && Array.isArray(data.items)) {
           setCatalogItems(data.items);
-          setCatalogMessage(data.source === "LRCLIB" ? "Resultados encontrados no LRCLIB." : "Resultados do catálogo local.");
+          setCatalogMessage(data.source === "LRCLIB" ? `Resultados encontrados no LRCLIB: ${data.items.length} faixa(s).` : "Resultados do catálogo local.");
         }
       } catch (error) {
-        if (active) setCatalogMessage(error.message || "Não foi possível pesquisar no catálogo externo.");
+        if (active) setCatalogMessage(`${error.message || "Não foi possível pesquisar no catálogo externo."} Mostrando apenas músicas previamente armazenadas, se houver.`);
       }
     }, 350);
     return () => { active = false; clearTimeout(timeout); };
   }, [query]);
 
-  const sourceTracks = catalogItems.length
-    ? catalogItems.map((track, index) => ({
-        ...track,
-        color: ["lilac", "coral", "blue", "gold", "green", "pink"][index % 6],
-        tag: track.provider === "LRCLIB" ? "LRCLIB" : "Exemplo",
-        genre: track.genre || "Música",
-      }))
-    : tracks;
+  const sourceTracks = catalogItems.map((track, index) => ({
+    ...track,
+    color: ["lilac", "coral", "blue", "gold", "green", "pink"][index % 6],
+    tag: track.provider === "LRCLIB" ? "LRCLIB" : "Catálogo",
+    genre: track.genre || "Gênero não informado",
+  }));
 
   const filteredTracks = useMemo(() => sourceTracks.filter((track) => {
     const matchesCategory = category === "Todas" || track.genre === category;
@@ -126,7 +124,7 @@ export default function App() {
     // Gêneros são termos de descoberta no LRCLIB, não metadados garantidos.
     const isGenreDiscovery = categories.some((genre) => genre.toLocaleLowerCase("pt-BR") === normalizedQuery);
     const searchable = `${track.title} ${track.artist} ${track.genre}`.toLocaleLowerCase("pt-BR");
-    return matchesCategory && (!normalizedQuery || isGenreDiscovery || searchable.includes(normalizedQuery));
+    return matchesCategory && (!normalizedQuery || searchable.includes(normalizedQuery) || (isGenreDiscovery && normalizedQuery === "todas"));
   }), [category, query, catalogItems]);
 
   const toggleSaved = (title) => {
@@ -237,7 +235,7 @@ export default function App() {
               <div className="track-card__image"><Artwork color={track.color} index={sourceTracks.indexOf(track)} /><span className="track-tag">{track.tag}</span><button className={isSaved ? "save-button save-button--active" : "save-button"} onClick={() => toggleSaved(track.title)} aria-label={isSaved ? `Remover ${track.title} dos salvos` : `Salvar ${track.title}`} aria-pressed={isSaved}><Heart size={17} fill={isSaved ? "currentColor" : "none"} /></button></div>
               <div className="track-card__body"><div><span className="track-genre">{track.genre}</span><h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id) { setNotice("Esta faixa é apenas um exemplo demonstrativo."); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
             </article>;
-          })}</div> : <div className="empty-state"><Search size={25} /><h3>Nenhuma música encontrada</h3><p>Tente outro termo ou escolha uma categoria diferente.</p><button className="button button--secondary" onClick={() => { setQuery(""); setCategory("Todas"); }}>Limpar filtros</button></div>}
+          })}</div> : <div className="empty-state"><Search size={25} /><h3>{catalogItems.length === 0 ? "Catálogo aguardando resultados reais" : "Nenhuma música encontrada"}</h3><p>{catalogItems.length === 0 ? "A fonte de músicas pode estar indisponível no momento. Tente novamente mais tarde ou pesquise diretamente no Letras.mus.br." : "Tente outro termo ou escolha uma categoria diferente."}</p>{query.trim().length >= 2 && <a className="button button--secondary" href={`https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}`} target="_blank" rel="noreferrer">Pesquisar no Letras.mus.br <ArrowRight size={15} /></a>}<button className="button button--secondary" onClick={() => { setQuery(""); setCategory("Todas"); }}>Limpar filtros</button></div>}
           <div className="catalog-note"><span><Sparkles size={15} /> Catálogo LRCLIB</span><p>Os resultados dependem da disponibilidade no LRCLIB. Confira os termos e direitos aplicáveis antes de republicar letras completas em um site comercial.</p></div>
         </section>
 
