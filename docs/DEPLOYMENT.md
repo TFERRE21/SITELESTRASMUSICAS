@@ -56,3 +56,10 @@ O repositório inicial não inclui `package-lock.json`. Execute `npm install` em
 ## Dados institucionais
 
 O único dado cadastral preenchido é o CNPJ informado pelo proprietário: 69.623.245/0001-71. Razão social, contato institucional, endereço e canal de direitos autorais permanecem vazios intencionalmente. A configuração não valida a situação cadastral junto à Receita Federal.
+
+
+## Servidor e catálogo musical
+
+O comando `npm start` compila o frontend e inicia `server.js`, que serve `dist/` e expõe as rotas `/api/*` na mesma porta `PORT` (padrão 4173). Configure a porta interna do painel VPS para coincidir com `PORT`.
+
+Para integração do catálogo, consulte [CATALOG-INTEGRATION.md](./CATALOG-INTEGRATION.md). Defina `MUSIXMATCH_API_KEY`, `MUSIXMATCH_LYRICS_ENABLED=false`, `CATALOG_SYNC_TOKEN` e `DATA_DIR=/data` nas variáveis privadas do painel. Monte volume persistente em `/data`; sem isso a cache pode se perder ao recriar o contêiner. Não ative letras completas sem confirmar que o contrato permite a exibição pública neste site.
