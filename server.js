@@ -129,6 +129,24 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
+  if (req.method === "GET" && url.pathname === "/api/artwork") {
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 180);
+    if (!q) return json(res, 400, { error: "Informe o nome da música ou artista." });
+    try {
+      const lookup = new URL("https://itunes.apple.com/search");
+      lookup.searchParams.set("term", q);
+      lookup.searchParams.set("entity", "song");
+      lookup.searchParams.set("limit", "1");
+      lookup.searchParams.set("country", "BR");
+      const response = await fetch(lookup, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(8000) });
+      if (!response.ok) throw new Error(`Serviço de capas respondeu HTTP ${response.status}.`);
+      const payload = await response.json();
+      const match = payload.results?.[0];
+      return json(res, 200, { artworkUrl: match?.artworkUrl100?.replace("100x100bb", "300x300bb") || "", title: match?.trackName || "", artist: match?.artistName || "", source: "iTunes Search API" });
+    } catch (error) {
+      return json(res, 502, { error: error.message || "Não foi possível buscar a capa." , artworkUrl: "" });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/api/charts") {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
     const storefront = country === "international" || country === "us" ? "us" : "br";
