@@ -129,6 +129,37 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
+  if (req.method === "GET" && url.pathname === "/api/music-search") {
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
+    if (q.length < 2) return json(res, 400, { error: "Digite pelo menos duas letras para pesquisar." });
+    try {
+      const lookup = new URL("https://itunes.apple.com/search");
+      lookup.searchParams.set("term", q);
+      lookup.searchParams.set("entity", "song");
+      lookup.searchParams.set("limit", "50");
+      lookup.searchParams.set("country", "BR");
+      const response = await fetch(lookup, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
+      if (!response.ok) throw new Error(`Pesquisa musical respondeu HTTP ${response.status}.`);
+      const payload = await response.json();
+      const items = (payload.results || []).map((track) => ({
+        id: `itunes-${track.trackId}`,
+        title: track.trackName || "Faixa sem título",
+        artist: track.artistName || "Artista desconhecido",
+        album: track.collectionName || "",
+        genre: track.primaryGenreName || "",
+        releaseDate: track.releaseDate || "",
+        provider: "iTunes",
+        artworkUrl: (track.artworkUrl100 || "").replace("100x100bb", "300x300bb"),
+        providerUrl: track.trackViewUrl || "",
+        previewUrl: track.previewUrl || "",
+        lyricsAvailable: false,
+        duration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : null
+      }));
+      return json(res, 200, { items, total: items.length, source: "iTunes Search API", query: q });
+    } catch (error) {
+      return json(res, 502, { error: error.message || "Não foi possível pesquisar o catálogo musical.", items: [] });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/api/artwork") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 180);
     if (!q) return json(res, 400, { error: "Informe o nome da música ou artista." });
