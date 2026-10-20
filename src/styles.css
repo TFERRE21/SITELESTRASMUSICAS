@@ -195,3 +195,11 @@ body,.site-shell{background:#fff;color:#202027}
 .discover .track-card__image>.track-artwork-photo{position:absolute;inset:0}
 .discover .track-card__image>.track-tag,.discover .track-card__image>.save-button{z-index:2}
 .discover .track-genre:empty{display:none}
+
+
+/* Paginação dos resultados musicais */
+.pagination{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:24px 0 8px;margin:10px auto 18px}
+.pagination button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:0 16px;border:1px solid #ded8ef;border-radius:9px;background:#fff;color:#5b43c8;font-weight:650;font-size:13px;cursor:pointer}
+.pagination button:disabled{opacity:.4;cursor:not-allowed}
+.pagination span{font-size:13px;color:#6e6b79;text-align:center}
+.pagination button:not(:disabled):hover{background:#f4f0ff;border-color:#b9a8ff}
