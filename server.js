@@ -77,9 +77,15 @@ function hashPassword(password, salt = randomBytes(16).toString("hex")) {
   return { salt, hash: scryptSync(password, salt, 64).toString("hex") };
 }
 function passwordMatches(password, user) {
-  const actual = scryptSync(password, user.salt, 64);
-  const expected = Buffer.from(user.passwordHash, "hex");
-  return actual.length === expected.length && timingSafeEqual(actual, expected);
+  if (!user || typeof user.salt !== "string" || !user.salt) return false;
+  // Cadastro grava o hash em "hash"; aceita o nome antigo também.
+  const storedHash = typeof user.passwordHash === "string" ? user.passwordHash : user.hash;
+  if (typeof storedHash !== "string" || !/^[a-f0-9]{128}$/i.test(storedHash)) return false;
+  try {
+    const actual = scryptSync(String(password), user.salt, 64);
+    const expected = Buffer.from(storedHash, "hex");
+    return actual.length === expected.length && timingSafeEqual(actual, expected);
+  } catch { return false; }
 }
 async function currentUser(req) {
   const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
@@ -411,31 +417,32 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.method === "GET" && url.pathname === "/api/charts") {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
-    const storefront = country === "international" || country === "us" ? "us" : "br";
+    const isGlobal = ["international", "global", "us"].includes(country);
+    const storefront = isGlobal ? "us" : "br";
     try {
-      const response = await fetch(`https://rss.applemarketingtools.com/api/v2/${storefront}/music/most-played/20/songs.json`, {
+      const response = await fetch(`https://rss.applemarketingtools.com/api/v2/${storefront}/music/most-played/10/songs.json`, {
         headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
         signal: AbortSignal.timeout(12000)
       });
-      if (!response.ok) throw new Error(`Apple Music charts respondeu HTTP ${response.status}.`);
+      if (!response.ok) throw new Error(`O ranking musical respondeu HTTP ${response.status}.`);
       const payload = await response.json();
-      const items = (payload.feed?.results || []).slice(0, 20).map((track, index) => ({
-        id: track.id || track.url,
-        rank: index + 1,
-        title: track.name || "Faixa sem título",
-        artist: track.artistName || "Artista desconhecido",
-        album: track.albumName || "",
-        genre: track.genres?.[0]?.name || "Outros",
+      const items = (payload.feed?.results || []).slice(0, 10).map((track, index) => ({
+        id: track.id || track.url, rank: index + 1,
+        title: track.name || "Faixa sem título", artist: track.artistName || "Artista desconhecido",
+        album: track.albumName || "", genre: track.genres?.[0]?.name || "Outros",
         genres: (track.genres || []).map((genre) => genre.name),
-        artworkUrl: track.artworkUrl100 || "",
-        url: track.url || "",
-        country: storefront === "br" ? "Nacional" : "Internacional",
-        source: "Apple Music Top Songs",
+        artworkUrl: track.artworkUrl100 || "", url: track.url || "",
+        country: isGlobal ? "Global" : "Brasil", source: "Apple Music Top Songs",
         updatedAt: payload.feed?.updated || new Date().toISOString()
       }));
-      return json(res, 200, { country: storefront, items, total: items.length, updatedAt: payload.feed?.updated || new Date().toISOString(), source: "Apple Music Top Songs" });
+      return json(res, 200, {
+        country: storefront, items, total: items.length,
+        updatedAt: payload.feed?.updated || new Date().toISOString(),
+        source: "Apple Music Top Songs",
+        note: "Este ranking é do Apple Music, não do YouTube. Para exibir o ranking oficial do YouTube, é necessária uma fonte oficial de charts acessível."
+      });
     } catch (error) {
-      return json(res, 502, { error: error.message || "Não foi possível carregar o ranking musical.", items: [], source: "Apple Music Top Songs" });
+      return json(res, 502, { error: error.message || "Não foi possível carregar o ranking musical.", items: [], source: "ranking musical" });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
