@@ -143,7 +143,7 @@ const server = http.createServer(async (req, res) => {
       const response = await fetch(lookup, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
       if (!response.ok) throw new Error(`Pesquisa musical respondeu HTTP ${response.status}.`);
       const payload = await response.json();
-      const items = (payload.results || []).map((track) => ({
+      let items = (payload.results || []).map((track) => ({
         id: `itunes-${track.trackId}`,
         title: track.trackName || "Faixa sem título",
         artist: track.artistName || "Artista desconhecido",
@@ -157,7 +157,36 @@ const server = http.createServer(async (req, res) => {
         lyricsAvailable: false,
         duration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : null
       }));
-      return json(res, 200, { items, total: payload.resultCount || items.length, page, limit: 50, hasMore: items.length === 50, source: "iTunes Search API", query: q });
+      // If Apple's catalog returns no matching tracks, search MusicBrainz for recordings.
+      let source = "Apple/iTunes";
+      if (!items.length && page === 1) {
+        const mbUrl = new URL("https://musicbrainz.org/ws/2/recording");
+        mbUrl.searchParams.set("query", q);
+        mbUrl.searchParams.set("fmt", "json");
+        mbUrl.searchParams.set("limit", "50");
+        mbUrl.searchParams.set("offset", "0");
+        const mbResponse = await fetch(mbUrl, { headers: { "User-Agent": "SomELetra/1.0 (music catalog search)", "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
+        if (mbResponse.ok) {
+          const mb = await mbResponse.json();
+          items = (mb.recordings || []).map((recording) => ({
+            id: `mb-${recording.id}`,
+            title: recording.title || "Faixa sem título",
+            artist: (recording["artist-credit"] || []).map((credit) => typeof credit === "string" ? credit : credit.name || credit.artist?.name || "").join(""),
+            album: (recording.releases || [])[0]?.title || "",
+            genre: (recording.tags || []).slice(0, 2).map((tag) => tag.name).join(", "),
+            releaseDate: recording["first-release-date"] || "",
+            provider: "MusicBrainz",
+            artworkUrl: "",
+            providerUrl: `https://musicbrainz.org/recording/${recording.id}`,
+            previewUrl: "",
+            lyricsAvailable: false,
+            duration: recording.length ? Math.round(recording.length / 1000) : null
+          }));
+          source = "MusicBrainz";
+        }
+      }
+      const total = payload.resultCount || items.length;
+      return json(res, 200, { items, total, page, limit: 50, hasMore: items.length === 50, source: items.length && items[0].provider === "MusicBrainz" ? "MusicBrainz" : source, query: q });
     } catch (error) {
       return json(res, 502, { error: error.message || "Não foi possível pesquisar o catálogo musical.", items: [] });
     }
