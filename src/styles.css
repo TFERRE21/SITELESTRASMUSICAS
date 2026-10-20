@@ -38,3 +38,85 @@
 .chart-open{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;color:#c8b8ff}
 .chart-disclaimer{color:#8e8999;font-size:11px;line-height:1.7;margin-top:18px}
 @media(max-width:700px){.charts-section{padding:30px 20px 42px}.chart-toolbar{align-items:stretch;flex-direction:column}.chart-list{grid-template-columns:1fr}.chart-genre-select{justify-content:space-between}.chart-genre-select select{flex:1;max-width:65%}.chart-tab{flex:1}.chart-country-tabs{display:flex}}
+
+
+/* Direção visual: catálogo claro, com foco em busca e páginas de música */
+:root{color:#202027;background:#fff;--bg:#fff;--surface:#fff;--muted:#696975;--purple:#6b4de6;--line:#e5e5eb}
+body,.site-shell{background:#fff;color:#202027}
+.site-shell{background:#fff}
+.announcement{background:#f5f2ff;color:#5840b8;border-bottom:1px solid #e7e0ff}
+.site-header{max-width:1240px;border-bottom:1px solid #e9e9ee}
+.brand{color:#202027}
+.brand__icon{background:#eee9ff;color:#5b43c8}
+.brand__amp{color:#654de0}
+.main-nav{color:#595965}
+.main-nav a:hover,.text-link:hover{color:#5d45d3}
+.saved-pill{background:#fff;border-color:#dedee7;color:#33323b}
+.saved-pill b{background:#f0ecff;color:#5d45d3}
+.hero{max-width:1240px;min-height:330px;padding-top:45px;padding-bottom:35px}
+.hero h1{font-size:clamp(36px,4vw,50px);color:#202027}
+.hero h1 span,.section-heading h2 span{color:#6048d8}
+.hero__copy>p,.hero__proof{color:#696975}
+.hero-art__halo{border-color:#ece7ff;box-shadow:0 0 0 28px #f7f5ff,0 0 0 57px #fbfaff}
+.hero-art__disc{background:repeating-radial-gradient(circle at center,#f0edf8 0 2px,#fff 3px 5px);border-color:#ded7f3;box-shadow:0 18px 55px #30205d12}
+.hero-art__disc-center{background:#d9ceff;color:#4a369c;border-color:#f0ebff}
+.float-card{background:#fff;border-color:#e6e2ee;box-shadow:0 18px 35px #211a3514}
+.float-card__caption strong{color:#282532}
+.stat-strip{background:#fff;border-color:#e8e8ef;box-shadow:0 8px 25px #25213a08}
+.stat-strip strong{color:#282832}
+.stat-strip small{color:#747481}
+.stat-strip__icon{background:#f1edff;color:#6248d9}
+.section-heading h2{color:#202027}
+.section-heading>div:first-child>p{color:#696975}
+.search-box{background:#fff;border-color:#dedee7;color:#666675}
+.search-box input{color:#202027}
+.search-box input::placeholder{color:#8b8b97}
+.category{background:#fff;border-color:#dedee7;color:#555563}
+.category:hover{border-color:#9e8be8}
+.category--active{background:#6c50df;border-color:#6c50df;color:#fff}
+.track-card{background:#fff;border-color:#e5e5eb;box-shadow:0 5px 18px #22202a08}
+.track-card:hover{border-color:#c7b9ff;box-shadow:0 10px 24px #31215d12}
+.track-card h3{color:#202027}
+.track-card p{color:#696975}
+.track-genre{color:#6148d8}
+.track-tag{background:#f5f2ff;color:#5140a5}
+.save-button{background:#ffffffdf;border-color:#ded8ef;color:#5d4b9a}
+.save-button--active{background:#6c50df;color:#fff;border-color:#6c50df}
+.track-card__arrow{border-color:#e3e0eb;color:#654cda}
+.track-card__arrow:hover{background:#f3efff}
+.catalog-note{border-color:#e8e8ef}
+.catalog-note span{color:#6148d8}
+.catalog-note p,.empty-state{color:#747481}
+.empty-state{border-color:#e1deeb}
+.empty-state h3{color:#282532}
+.button--secondary{background:#f0ecff;color:#4d38b4}
+.inline-notice{background:#f7f4ff;border-color:#ded5ff;color:#4b3a8c}
+.about-band{background:#f5f2ff;border-color:#e4dcff}
+.about-band h2{color:#24212e}
+.about-band p{color:#696477}
+.about-band .eyebrow{color:#6248d8}
+.about-band__icon{background:#ded4ff;color:#4e38a9}
+.button--light{background:#6c50df;color:#fff}
+.site-footer{background:#fafafe;border-color:#e8e8ef}
+.footer-links strong,.footer-brand{color:#282532}
+.footer-brand>p,.footer-links a{color:#6e6b79}
+.footer-bottom{border-color:#e7e7ee;color:#777482}
+.footer-disclaimer{color:#8b8793}
+.ad-slot{border-color:#ded8ec;color:#777183}
+.charts-section{border-color:#e8e8ef}
+.chart-tab{background:#fff;color:#555563;border-color:#dedee7}
+.chart-tab--active{background:#6c50df;color:#fff;border-color:#6c50df}
+.chart-genre-select{color:#696975}
+.chart-genre-select select{background:#fff;color:#202027;border-color:#dedee7}
+.chart-row{background:#fff;border-color:#e5e5eb}
+.chart-track-info strong{color:#202027}
+.chart-track-info span{color:#696975}
+.chart-track-info small{color:#6248d8}
+.chart-open{border-color:#e2ddec;color:#6248d8}
+.chart-disclaimer{color:#777482}
+.lyrics-panel{background:#fff;border-color:#e3deef;color:#202027;box-shadow:0 25px 80px #20173824}
+.lyrics-content{color:#33323d}
+.lyrics-panel small{color:#777482}
+.lyrics-close{background:#f6f4fb;border-color:#e2ddec;color:#33323d}
+.lyrics-artist{color:#6248d8}
+@media(max-width:760px){.main-nav{background:#fff;border-color:#e8e8ef}.main-nav a{border-color:#eeeef3}}
