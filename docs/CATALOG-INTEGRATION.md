@@ -1,41 +1,37 @@
-# Catálogo musical real e sincronização diária
+# Integração do catálogo musical LRCLIB
 
-## Provedor identificado
+## Provedor configurado
 
-Musixmatch oferece uma API de catálogo e letras e documenta o uso de letras licenciadas em produtos. O proprietário precisa criar uma conta, obter uma chave e confirmar por escrito que o plano/contrato autoriza a exibição pública de letras completas neste site, nos territórios desejados e no modelo comercial pretendido. Uma chave de API, por si só, não comprova licença para publicar letras completas.
+O site usa a API pública do LRCLIB. **Não é necessária chave de API nem cadastro** para consultar os endpoints documentados.
 
-- Cadastro/documentação: https://developer.musixmatch.com/
-- Termos: https://www.musixmatch.com/apiterms/
-- SDK/OpenAPI público: https://github.com/musixmatch/musixmatch-sdk
+- Documentação oficial: https://lrclib.net/docs
+- Base da API: https://lrclib.net
+- Busca: `GET /api/search?q=nome+da+faixa+artista`
+- Letra por ID: `GET /api/get/{id}`
+- Consulta por assinatura da faixa: `GET /api/get?track_name=...&artist_name=...&album_name=...&duration=...`
 
-Os planos, limites, endpoints disponíveis e direitos concedidos podem variar. Não foi criada nem presumida qualquer conta ou chave.
+O servidor envia um User-Agent identificando o projeto, verifica respostas HTTP e retorna erro 429 quando há limitação temporária. Faça buscas sob demanda, sem varreduras em massa; respeite Retry-After e os limites publicados pela LRCLIB.
 
-## Como configurar no VPS
+## Variáveis no iContainer
 
-Configure estas variáveis no painel de ambiente da aplicação, sem incluí-las no Git:
+Para a integração LRCLIB, não é necessário preencher `MUSIXMATCH_API_KEY`, `MUSIXMATCH_LYRICS_ENABLED` ou `CATALOG_SYNC_TOKEN`. Removemos essas configurações da integração atual.
 
-- `MUSIXMATCH_API_KEY`: chave real fornecida ao titular da conta.
-- `MUSIXMATCH_LYRICS_ENABLED`: manter `false` até confirmar o contrato de exibição pública de letras completas. Alterar para `true` somente após autorização aplicável.
-- `CATALOG_SYNC_TOKEN`: token aleatório forte para proteger a rota de sincronização manual.
-- `DATA_DIR`: diretório persistente com permissão de escrita, preferencialmente um volume montado do VPS (ex.: `/data`).
+Opcional:
 
-O processo precisa ter saída HTTPS para `api.musixmatch.com`. Nunca use prefixo `VITE_` para credenciais privadas.
+- `DATA_DIR=/data`: diretório gravável para cache de metadados de buscas. Monte um volume persistente no caminho se quiser preservar o cache entre recriações do contêiner. As letras não são gravadas nessa cache.
 
-## Endpoints implementados
+Mantenha a porta interna `4173` no iContainer (ou defina `PORT` para a porta configurada na aplicação).
 
-- `GET /api/health`: estado do serviço e configuração (não expõe segredos).
-- `GET /api/catalog?q=nome+da+faixa&page=1`: pesquisa catálogo pelo provedor.
-- `GET /api/catalog`: devolve itens da cache da sincronização.
-- `GET /api/lyrics/{trackId}`: permanece bloqueado por padrão até ativação explícita após validação da licença.
-- `POST /api/admin/sync`: sincronização manual autenticada com `Authorization: Bearer <CATALOG_SYNC_TOKEN>`.
+## Endpoints locais
 
-A sincronização automática roda ao iniciar (se a chave existir) e depois a cada 24 horas, consultando o chart configurado para Brasil. A cache é mesclada por identificador e limitada a 1.000 faixas. Configure um volume persistente em `DATA_DIR`; sem volume, a cache pode ser perdida quando o contêiner for recriado.
+- `GET /api/health`: informa provedor LRCLIB e confirma que não é necessária chave.
+- `GET /api/catalog?q=nome+da+faixa`: consulta a busca LRCLIB, retorna até 20 resultados e armazena apenas metadados em cache.
+- `GET /api/catalog`: devolve os metadados armazenados em cache.
+- `GET /api/lyrics/{trackId}`: consulta a letra por ID no LRCLIB.
 
-## Limitações e segurança
+## Limitações importantes
 
-- A disponibilidade de endpoints, charts, campos e letras depende do plano e dos limites atuais do provedor. Erros são devolvidos como JSON e registrados sem imprimir a chave.
-- A resposta de letras pode ser apenas um trecho dependendo do acesso contratado; não se presume disponibilidade de letras completas.
-- A sincronização inicial atualiza o chart do Brasil, não é uma importação exaustiva de todas as músicas do mundo. Pesquisa sob demanda pode encontrar faixas internacionais.
-- Não há catálogo completo de todas as músicas: isso exige contrato, limites, fonte e estratégia de ingestão próprios.
-- A cache é um arquivo JSON, não um banco de dados multiusuário. Para escala, adicionar banco de dados, migrações, fila de sincronização, controle de rate limit e política de retenção.
-- Revise atribuição, avisos de copyright, cache, uso de capas e restrições territoriais de acordo com o contrato.
+- LRCLIB não documenta um endpoint de charts para popular automaticamente um catálogo mundial. Por isso, não fazemos sincronização diária em massa; a pesquisa ocorre quando o visitante busca uma música ou artista.
+- A presença de uma letra na API não garante autorização para republicá-la em um site comercial. Verifique os termos, os direitos autorais e a adequação ao seu uso antes de publicar letras completas.
+- A base pode não conter todas as músicas. A API tem limites; ao receber HTTP 429, aguarde o período indicado em `Retry-After`.
+- O projeto não usa scraping de sites de terceiros.
