@@ -1,0 +1,2 @@
+# Add only the exact authorized seller declaration supplied by your real advertising provider.
+# Do not publish guessed publisher IDs.
