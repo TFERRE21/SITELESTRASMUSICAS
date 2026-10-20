@@ -419,40 +419,40 @@ const server = http.createServer(async (req, res) => {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
     const isGlobal = ["international", "global", "us"].includes(country);
     const countrySlug = isGlobal ? "worldwide" : "brazil";
-    // CHARTEX republishes YouTube's official weekly Top Songs charts with song
-    // metadata. The label below identifies it as a third-party presentation of
-    // YouTube's charts, not a native YouTube API endpoint.
     try {
       const chartUrl = `https://chartex.com/charts/youtube/weekly/${countrySlug}`;
       const response = await fetch(chartUrl, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; SomELetra/1.0)", "Accept": "text/html" },
         signal: AbortSignal.timeout(15000)
       });
-      if (!response.ok) throw new Error(`Chart page respondeu HTTP ${response.status}.`);
+      if (!response.ok) throw new Error(`A fonte do ranking respondeu HTTP ${response.status}.`);
       const html = await response.text();
-      const titleText = html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1] || "";
-      const pageTitle = titleText.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").trim();
+      const decoded = html.replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ");
+      const titleText = decoded.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
+      const chartTitle = titleText.replace(/<[^>]+>/g, "").trim();
+      const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
+      const strip = (value) => value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
       const rows = [];
-      const linkPattern = /<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi;
-      const links = [...html.matchAll(linkPattern)];
-      for (let i = 0; i < links.length; i++) {
-        const href = links[i][1];
-        const inner = links[i][2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").replace(/\\s+/g, " ").trim();
-        if (!/\\/(songs|sounds)\\//i.test(href) || !inner || inner.length > 180) continue;
-        const title = inner;
-        const prev = links.slice(i + 1, i + 5).map((x) => x[2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/\\s+/g, " ").trim()).find((x) => x && x.length < 160 && !/^\\d{1,2}\\s/.test(x));
-        const imageMatch = html.slice(Math.max(0, links[i].index - 1500), links[i].index).match(/<img[^>]+src=["']([^"']+)["']/i);
-        const artist = (prev || "").replace(/\\d{1,2}\\s+[A-Z][a-z]{2}\\s+\\d{4}.*$/, "").trim() || "Ver artistas na fonte";
-        if (rows.some((r) => r.title === title)) continue;
+      for (const rowMatch of decoded.matchAll(rowRegex)) {
+        const row = rowMatch[1];
+        const hrefMatch = row.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);
+        if (!hrefMatch) continue;
+        const href = hrefMatch[1];
+        if (!/\/(songs|sounds)\//i.test(href)) continue;
+        const title = strip(hrefMatch[2]);
+        if (!title || title.length > 180 || rows.some((item) => item.title === title)) continue;
+        const cellRegex = /<td\b[^>]*>([\s\S]*?)<\/td>/gi;
+        const cells = [...row.matchAll(cellRegex)].map((cell) => strip(cell[1]));
+        const rankCandidate = Number.parseInt(cells[0] || "", 10);
+        if (Number.isFinite(rankCandidate) && (rankCandidate < 1 || rankCandidate > 500)) continue;
+        const artist = cells.slice(1).find((value) => value && value !== title && !/^[-–—]$/.test(value)) || "Ver artistas na fonte";
+        const img = row.match(/<img\b[^>]*src=["']([^"']+)["']/i);
         rows.push({
           id: `ytchart-${countrySlug}-${rows.length+1}`,
-          rank: rows.length+1,
-          title,
-          artist,
-          album: "",
-          genre: "YouTube Top Songs",
+          rank: Number.isFinite(rankCandidate) && rankCandidate > 0 ? rankCandidate : rows.length+1,
+          title, artist, album: "", genre: "YouTube Top Songs",
           genres: [{ name: "YouTube Top Songs" }],
-          artworkUrl: imageMatch?.[1] || "",
+          artworkUrl: img?.[1] || "",
           url: href.startsWith("http") ? href : `https://chartex.com${href}`,
           country: isGlobal ? "Global" : "Brasil",
           source: "YouTube Top Songs via ChartEx",
@@ -460,18 +460,14 @@ const server = http.createServer(async (req, res) => {
         });
         if (rows.length >= 10) break;
       }
-      if (!rows.length) {
-        const error = new Error("Não foi possível extrair os dados do ranking oficial nesta resposta. Nenhuma lista alternativa será apresentada como se fosse o ranking do YouTube.");
-        error.status = 502;
-        throw error;
-      }
+      if (!rows.length) throw new Error("A fonte não apresentou músicas em formato reconhecido. O site não mostrará dados de outro serviço como se fossem do YouTube.");
       return json(res, 200, {
         country: countrySlug, items: rows, total: rows.length,
         updatedAt: new Date().toISOString(),
         source: "YouTube Top Songs via ChartEx",
         sourceUrl: chartUrl,
-        chartTitle: pageTitle,
-        note: "Ranking semanal de músicas do YouTube apresentado por um serviço terceiro."
+        chartTitle,
+        note: "Ranking semanal do YouTube apresentado por um serviço terceiro."
       });
     } catch (error) {
       return json(res, 502, { error: error.message || "Não foi possível carregar o ranking do YouTube.", items: [], source: "YouTube Top Songs" });
