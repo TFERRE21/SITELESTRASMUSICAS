@@ -98,12 +98,12 @@ export default function App() {
     let active = true;
     const timeout = setTimeout(async () => {
       try {
-        const response = await fetch(`/api/catalog?q=${encodeURIComponent(term)}&page=1`);
+        const response = await fetch(`/api/music-search?q=${encodeURIComponent(term)}`);
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Falha na pesquisa.");
         if (active && Array.isArray(data.items)) {
           setCatalogItems(data.items);
-          setCatalogMessage(data.source === "LRCLIB" ? `Resultados encontrados no LRCLIB: ${data.items.length} faixa(s).` : "Resultados do catálogo local.");
+          setCatalogMessage(data.items.length ? `${data.items.length} músicas encontradas em ${data.source || "fontes musicais"}.` : "Nenhuma música encontrada. Tente outro nome ou artista.");
         }
       } catch (error) {
         if (active) setCatalogMessage(`${error.message || "Não foi possível pesquisar no catálogo externo."} Mostrando apenas músicas previamente armazenadas, se houver.`);
@@ -248,7 +248,7 @@ export default function App() {
             const isSaved = saved.includes(track.title);
             return <article className="track-card" key={track.title}>
               <div className="track-card__image">{track.artworkUrl ? <img className="track-artwork-photo" src={track.artworkUrl} alt={`Capa de ${track.title}`} loading="lazy" /> : <Artwork color={track.color} index={sourceTracks.indexOf(track)} />}<span className="track-tag">{track.tag}</span><button className={isSaved ? "save-button save-button--active" : "save-button"} onClick={() => toggleSaved(track.title)} aria-label={isSaved ? `Remover ${track.title} dos salvos` : `Salvar ${track.title}`} aria-pressed={isSaved}><Heart size={17} fill={isSaved ? "currentColor" : "none"} /></button></div>
-              <div className="track-card__body"><div>{track.genre && <span className="track-genre">{track.genre}</span>}<h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id) { setNotice("Esta faixa é apenas um exemplo demonstrativo."); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
+              <div className="track-card__body"><div>{track.genre && <span className="track-genre">{track.genre}</span>}<h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id || String(track.id).startsWith("itunes-")) { setNotice("Encontramos os dados e a capa desta música. A letra só será exibida quando houver uma fonte de letras disponível e autorizada."); if (track.providerUrl) window.open(track.providerUrl, "_blank", "noopener,noreferrer"); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
             </article>;
           })}</div> : <div className="empty-state"><Search size={25} /><h3>{catalogItems.length === 0 ? "Catálogo aguardando resultados reais" : "Nenhuma música encontrada"}</h3><p>{catalogItems.length === 0 ? "A fonte de músicas pode estar indisponível no momento. Tente novamente mais tarde ou pesquise diretamente no Letras.mus.br." : "Tente outro termo ou escolha uma categoria diferente."}</p>{query.trim().length >= 2 && <a className="button button--secondary" href={`https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}`} target="_blank" rel="noreferrer">Pesquisar no Letras.mus.br <ArrowRight size={15} /></a>}<button className="button button--secondary" onClick={() => { setQuery(""); setCategory("Todas"); }}>Limpar filtros</button></div>}
           <div className="catalog-note"><span><Sparkles size={15} /> Catálogo LRCLIB</span><p>Os resultados dependem da disponibilidade no LRCLIB. Confira os termos e direitos aplicáveis antes de republicar letras completas em um site comercial.</p></div>
