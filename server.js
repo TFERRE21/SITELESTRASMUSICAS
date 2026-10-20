@@ -136,7 +136,9 @@ const server = http.createServer(async (req, res) => {
       const lookup = new URL("https://itunes.apple.com/search");
       lookup.searchParams.set("term", q);
       lookup.searchParams.set("entity", "song");
+      const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1);
       lookup.searchParams.set("limit", "50");
+      lookup.searchParams.set("offset", String((page - 1) * 50));
       lookup.searchParams.set("country", "BR");
       const response = await fetch(lookup, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
       if (!response.ok) throw new Error(`Pesquisa musical respondeu HTTP ${response.status}.`);
@@ -155,7 +157,7 @@ const server = http.createServer(async (req, res) => {
         lyricsAvailable: false,
         duration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : null
       }));
-      return json(res, 200, { items, total: items.length, source: "iTunes Search API", query: q });
+      return json(res, 200, { items, total: payload.resultCount || items.length, page, limit: 50, hasMore: items.length === 50, source: "iTunes Search API", query: q });
     } catch (error) {
       return json(res, 502, { error: error.message || "Não foi possível pesquisar o catálogo musical.", items: [] });
     }
