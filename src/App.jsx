@@ -157,7 +157,7 @@ export default function App() {
       const title = params.get("title");
       const artist = params.get("artist");
       if (title && artist) {
-        openLyrics({ id: "itunes-direct", title, artist });
+        openLyrics({ id: "itunes-direct", title, artist, artworkUrl: params.get("artwork") || "", album: params.get("album") || "", releaseDate: params.get("releaseDate") || "", genre: params.get("genre") || "" });
       } else {
         setLyrics(null);
         setVideo(null);
@@ -183,6 +183,15 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     const currentUrl = new URL(window.location.href);
     if (currentUrl.searchParams.get("title") !== item.title || currentUrl.searchParams.get("artist") !== item.artist) {
       const params = new URLSearchParams({ title: item.title || "", artist: item.artist || "" });
+      const metadata = {
+        artwork: item.artworkUrl || item.artworkUrl100,
+        album: item.album,
+        releaseDate: item.releaseDate,
+        genre: item.genre
+      };
+      for (const [key, value] of Object.entries(metadata)) {
+        if (value) params.set(key, String(value));
+      }
       window.history.pushState({ song: true }, "", `?${params.toString()}`);
     }
     setVideo(null);
