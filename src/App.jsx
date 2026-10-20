@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight, AudioLines, Check, ChevronRight, Disc3, Headphones,
   Heart, Menu, Music2, Search, Sparkles, X
@@ -43,12 +43,63 @@ export default function App() {
   const [saved, setSaved] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
   const [notice, setNotice] = useState("");
+  const [catalogItems, setCatalogItems] = useState([]);
+  const [catalogMessage, setCatalogMessage] = useState("Carregando catálogo...");
+  const [lyricsModal, setLyricsModal] = useState(null);
 
-  const filteredTracks = useMemo(() => tracks.filter((track) => {
+  useEffect(() => {
+    let active = true;
+    fetch("/api/catalog")
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Catálogo indisponível.");
+        return data;
+      })
+      .then((data) => {
+        if (!active) return;
+        setCatalogItems(Array.isArray(data.items) ? data.items : []);
+        setCatalogMessage(data.items?.length
+          ? `Catálogo atualizado em ${data.lastSyncAt ? new Date(data.lastSyncAt).toLocaleString("pt-BR") : "última sincronização"}.`
+          : "Catálogo externo ainda não sincronizado. Configure a chave do provedor no VPS.");
+      })
+      .catch(() => { if (active) setCatalogMessage("Catálogo externo indisponível; exibindo exemplos demonstrativos."); });
+    return () => { active = false; };
+  }, []);
+
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) return undefined;
+    let active = true;
+    const timeout = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/catalog?q=${encodeURIComponent(term)}&page=1`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Falha na pesquisa.");
+        if (active && Array.isArray(data.items)) {
+          setCatalogItems(data.items);
+          setCatalogMessage(data.source === "Musixmatch" ? "Resultados do catálogo Musixmatch." : "Resultados do catálogo local.");
+        }
+      } catch (error) {
+        if (active) setCatalogMessage(error.message || "Não foi possível pesquisar no catálogo externo.");
+      }
+    }, 350);
+    return () => { active = false; clearTimeout(timeout); };
+  }, [query]);
+
+  const sourceTracks = catalogItems.length
+    ? catalogItems.map((track, index) => ({
+        ...track,
+        color: ["lilac", "coral", "blue", "gold", "green", "pink"][index % 6],
+        tag: track.provider === "Musixmatch" ? "Catálogo real" : "Sincronizada",
+        genre: track.genre || "Música",
+      }))
+    : tracks;
+
+  const filteredTracks = useMemo(() => sourceTracks.filter((track) => {
     const matchesCategory = category === "Todas" || track.genre === category;
     const searchable = `${track.title} ${track.artist} ${track.genre}`.toLocaleLowerCase("pt-BR");
     return matchesCategory && searchable.includes(query.toLocaleLowerCase("pt-BR"));
-  }), [category, query]);
+  }), [category, query, catalogItems]);
 
   const toggleSaved = (title) => {
     setSaved((current) => current.includes(title)
@@ -109,7 +160,7 @@ export default function App() {
 
         <section className="discover section-wrap" id="descobrir">
           <div className="section-heading">
-            <div><span className="eyebrow"><span className="eyebrow__line" /> EXPLORE NO SEU RITMO</span><h2>Descubra seu próximo <span>favorito.</span></h2><p>Uma seleção demonstrativa para navegar pela experiência musical.</p></div>
+            <div><span className="eyebrow"><span className="eyebrow__line" /> EXPLORE NO SEU RITMO</span><h2>Descubra seu próximo <span>favorito.</span></h2><p>Pesquise músicas do catálogo conectado e descubra novos artistas.</p><p className="catalog-status" role="status">{catalogMessage}</p></div>
             <div className="discover__count"><span className="count-dot" /> {filteredTracks.length} resultados</div>
           </div>
           <div className="filters">
@@ -123,7 +174,7 @@ export default function App() {
             const isSaved = saved.includes(track.title);
             return <article className="track-card" key={track.title}>
               <div className="track-card__image"><Artwork color={track.color} index={tracks.indexOf(track)} /><span className="track-tag">{track.tag}</span><button className={isSaved ? "save-button save-button--active" : "save-button"} onClick={() => toggleSaved(track.title)} aria-label={isSaved ? `Remover ${track.title} dos salvos` : `Salvar ${track.title}`} aria-pressed={isSaved}><Heart size={17} fill={isSaved ? "currentColor" : "none"} /></button></div>
-              <div className="track-card__body"><div><span className="track-genre">{track.genre}</span><h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={() => setNotice("Esta é uma prévia de demonstração. As páginas de música serão conectadas a fontes autorizadas na próxima etapa.")}><ArrowRight size={18} /></button></div>
+              <div className="track-card__body"><div><span className="track-genre">{track.genre}</span><h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id) { setNotice("Esta faixa é apenas um exemplo demonstrativo."); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
             </article>;
           })}</div> : <div className="empty-state"><Search size={25} /><h3>Nenhuma música encontrada</h3><p>Tente outro termo ou escolha uma categoria diferente.</p><button className="button button--secondary" onClick={() => { setQuery(""); setCategory("Todas"); }}>Limpar filtros</button></div>}
           <div className="catalog-note"><span><Sparkles size={15} /> Conteúdo de demonstração</span><p>Artistas e faixas exibidos nesta página são exemplos ilustrativos, não um catálogo de lançamentos verificados.</p></div>
@@ -139,6 +190,7 @@ export default function App() {
         <div className="footer-bottom"><span>© {new Date().getFullYear()} {institutional.brandName}. Projeto em desenvolvimento.</span><span className="footer-status"><i /> Ambiente demonstrativo</span></div>
         <p className="footer-disclaimer">Faixas, artistas e artes nesta versão são demonstrativos. Letras completas e outros materiais protegidos só devem ser exibidos com autorização ou fundamento legal válido.</p>
       </footer>
+      {lyricsModal && <div className="lyrics-overlay" role="dialog" aria-modal="true" aria-label={`Letra de ${lyricsModal.title}`}><section className="lyrics-panel"><button className="lyrics-close" onClick={() => setLyricsModal(null)} aria-label="Fechar"><X /></button><span className="eyebrow">CATÁLOGO MUSICAL</span><h2>{lyricsModal.title}</h2><p className="lyrics-artist">{lyricsModal.artist}</p><div className="lyrics-content">{lyricsModal.text}</div>{lyricsModal.copyright && <small>{lyricsModal.copyright}</small>}</section></div>}
       <div className="toast-region" aria-live="polite">{notice ? <div className="toast"><Check size={15} />{notice}<button onClick={() => setNotice("")} aria-label="Fechar mensagem"><X size={14} /></button></div> : null}</div>
     </div>
   );
