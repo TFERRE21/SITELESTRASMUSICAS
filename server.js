@@ -12,6 +12,12 @@ const PORT = Number(process.env.PORT || 4173);
 const USER_AGENT = "SomELetra/0.2 (https://github.com/TFERRE21/SITELESTRASMUSICAS)";
 let cachedCatalog = [];
 let lastSearchAt = null;
+let robotRunning = false;
+let robotLastRunAt = null;
+let robotLastError = null;
+let robotQueryIndex = 0;
+const ROBOT_INTERVAL_MS = 60_000;
+const ROBOT_QUERIES = ["gospel", "sertanejo", "MPB", "pop brasileiro", "rock brasileiro", "rap brasileiro", "funk brasileiro", "pagode", "samba", "forró", "reggae", "música eletrônica", "indie brasileiro", "jazz", "música clássica", "bossa nova", "country", "metal", "música latina", "louvor", "hinos", "Chitãozinho Xororó", "Marília Mendonça", "Legião Urbana", "Anitta", "Roberto Carlos", "Gilberto Gil", "Djavan", "Gusttavo Lima", "Adele"];
 
 const json = (res, status, body) => {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
@@ -30,7 +36,7 @@ async function saveCatalog(items) {
   await mkdir(dataDir, { recursive: true });
   const merged = new Map(cachedCatalog.map((item) => [String(item.id), item]));
   for (const item of items) merged.set(String(item.id), item);
-  cachedCatalog = [...merged.values()].slice(-1000);
+  cachedCatalog = [...merged.values()].slice(-5000);
   lastSearchAt = new Date().toISOString();
   await writeFile(catalogFile, JSON.stringify({ lastSearchAt, items: cachedCatalog }, null, 2), { mode: 0o600 });
 }
@@ -94,9 +100,17 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
+  if (req.method === "GET" && url.pathname === "/api/catalog/status") {
+    return json(res, 200, { robot: "Som & Letra", running: robotRunning, cachedItems: cachedCatalog.length, lastSearchAt, robotLastRunAt, robotLastError, intervalSeconds: ROBOT_INTERVAL_MS / 1000, source: "LRCLIB" });
+  }
   if (req.method === "GET" && url.pathname === "/api/catalog") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
-    if (!q) return json(res, 200, { items: cachedCatalog.slice(0, 20), source: "cache", lastSearchAt, provider: "LRCLIB", apiKeyRequired: false });
+    if (!q) {
+      const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1);
+      const limit = Math.min(100, Math.max(1, Number.parseInt(url.searchParams.get("limit") || "60", 10) || 60));
+      const start = (page - 1) * limit;
+      return json(res, 200, { items: cachedCatalog.slice(start, start + limit), total: cachedCatalog.length, page, limit, hasMore: start + limit < cachedCatalog.length, source: "cache", lastSearchAt, provider: "LRCLIB", apiKeyRequired: false, robotRunning });
+    }
     try {
       const results = await lrclib("/api/search", { q });
       const items = Array.isArray(results) ? results.map(normalizeTrack) : [];
@@ -123,5 +137,30 @@ const server = http.createServer(async (req, res) => {
   return json(res, 404, { error: "Não encontrado." });
 });
 
+async function robotCollectOneQuery() {
+  if (robotRunning) return;
+  robotRunning = true;
+  const q = ROBOT_QUERIES[robotQueryIndex % ROBOT_QUERIES.length];
+  robotQueryIndex += 1;
+  try {
+    const results = await lrclib("/api/search", { q });
+    const items = Array.isArray(results) ? results.map(normalizeTrack) : [];
+    await saveCatalog(items);
+    robotLastRunAt = new Date().toISOString();
+    robotLastError = null;
+    console.info("[catalog-robot] consulta " + q + ": " + items.length + " resultados; total local " + cachedCatalog.length + ".");
+  } catch (error) {
+    robotLastRunAt = new Date().toISOString();
+    robotLastError = error.message || "Falha na coleta automática.";
+    console.warn("[catalog-robot] " + robotLastError);
+  } finally { robotRunning = false; }
+}
+
 await readCatalog();
-server.listen(PORT, "0.0.0.0", () => console.info(`[server] Som & Letra ouvindo na porta ${PORT}; provedor LRCLIB sem chave de API.`));
+server.listen(PORT, "0.0.0.0", () => {
+  console.info(`[server] Som & Letra ouvindo na porta ${PORT}; provedor LRCLIB sem chave de API.`);
+  setTimeout(() => {
+    robotCollectOneQuery().catch((error) => console.warn("[catalog-robot]", error));
+    setInterval(() => robotCollectOneQuery().catch((error) => console.warn("[catalog-robot]", error)), ROBOT_INTERVAL_MS);
+  }, 10_000);
+});
