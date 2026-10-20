@@ -14,7 +14,7 @@ const tracks = [
   { title: "Cidade em Silêncio", artist: "Nilo Santos", genre: "Indie", color: "green", tag: "Descoberta" },
   { title: "Outra Estação", artist: "Clara Reis", genre: "MPB", color: "pink", tag: "Na sua lista" },
 ];
-const categories = ["Todas", "Gospel", "MPB", "Pop", "Indie"];
+const categories = ["Todas", "Gospel", "Sertanejo", "MPB", "Pop", "Rock", "Rap", "Funk", "Pagode", "Samba", "Forró", "Reggae", "Eletrônica", "Indie", "Jazz", "Clássica", "Country", "Metal", "Bossa Nova", "Música Latina"];
 
 function Artwork({ color, index }) {
   return (
@@ -166,7 +166,7 @@ export default function App() {
           <div className="filters">
             <div className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar música, artista ou estilo..." aria-label="Buscar música, artista ou estilo" /><kbd>⌕</kbd></div>
             <div className="category-list" id="generos" aria-label="Filtrar por gênero">
-              {categories.map((item) => <button key={item} className={category === item ? "category category--active" : "category"} onClick={() => setCategory(item)}>{item}</button>)}
+              {categories.map((item) => <button key={item} className={category === item ? "category category--active" : "category"} onClick={() => { setCategory("Todas"); setQuery(item === "Todas" ? "" : item); }}>{item}</button>)}
             </div>
           </div>
           {notice && <div className="inline-notice" role="status"><Check size={15} />{notice}<button onClick={() => setNotice("")} aria-label="Dispensar aviso"><X size={14} /></button></div>}
