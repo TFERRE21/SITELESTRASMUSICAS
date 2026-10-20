@@ -234,6 +234,33 @@ const server = http.createServer(async (req, res) => {
       return json(res, 502, { error: error.message || "Não foi possível buscar a capa." , artworkUrl: "" });
     }
   }
+  if (req.method === "GET" && url.pathname === "/api/music-video") {
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 180);
+    if (!q) return json(res, 400, { error: "Informe o nome da música e do artista." });
+    const apiKey = process.env.YOUTUBE_API_KEY;
+    if (!apiKey) return json(res, 503, { error: "O player de vídeos ainda precisa da chave oficial da YouTube Data API (YOUTUBE_API_KEY)." });
+    try {
+      const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
+      searchUrl.searchParams.set("part", "snippet");
+      searchUrl.searchParams.set("type", "video");
+      searchUrl.searchParams.set("maxResults", "5");
+      searchUrl.searchParams.set("q", q);
+      searchUrl.searchParams.set("key", apiKey);
+      const response = await fetch(searchUrl, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
+      const payload = await response.json();
+      if (!response.ok) throw new Error(payload.error?.message || "Não foi possível pesquisar vídeos no YouTube.");
+      const videos = (payload.items || []).filter((item) => item.id?.videoId).map((item) => ({
+        videoId: item.id.videoId,
+        title: item.snippet?.title || "",
+        channel: item.snippet?.channelTitle || "",
+        thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || ""
+      }));
+      if (!videos.length) return json(res, 404, { error: "Nenhum vídeo relacionado foi encontrado." });
+      return json(res, 200, { video: videos[0], alternatives: videos.slice(1), source: "YouTube Data API" });
+    } catch (error) {
+      return json(res, 502, { error: error.message || "Falha ao localizar vídeo." });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/api/charts") {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
     const storefront = country === "international" || country === "us" ? "us" : "br";
