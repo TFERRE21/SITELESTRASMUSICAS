@@ -103,11 +103,20 @@ async function syncDailyCatalog() {
   if (!MUSIXMATCH_API_KEY || syncInProgress) return;
   syncInProgress = true;
   try {
-    // One provider request per daily sync; never scrape third-party websites.
-    const body = await musixmatch("chart.tracks.get", { country: "br", page: 1, page_size: 100 });
-    const items = (body.track_list || []).map((entry) => normalizeTrack(entry.track));
-    await saveCatalog(items);
-    console.info(`[catalog] Sincronização diária concluída: ${items.length} faixas.`);
+    // Refresh selected international charts sequentially; never scrape third-party websites.
+    const items = [];
+    for (const country of ["br", "us", "gb", "pt"]) {
+      try {
+        const body = await musixmatch("chart.tracks.get", { country, page: 1, page_size: 100 });
+        items.push(...(body.track_list || []).map((entry) => ({ ...normalizeTrack(entry.track), chartCountry: country.toUpperCase() })));
+      } catch (error) {
+        console.error(`[catalog] Falha ao sincronizar chart ${country.toUpperCase()}:`, error.message);
+      }
+    }
+    if (items.length) {
+      await saveCatalog(items);
+      console.info(`[catalog] Sincronização diária concluída: ${items.length} faixas em ${new Set(items.map((item) => item.chartCountry)).size} mercados.`);
+    }
   } catch (error) {
     console.error("[catalog] Sincronização diária falhou:", error.message);
   } finally {
