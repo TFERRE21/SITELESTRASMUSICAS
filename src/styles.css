@@ -203,3 +203,17 @@ body,.site-shell{background:#fff;color:#202027}
 .pagination button:disabled{opacity:.4;cursor:not-allowed}
 .pagination span{font-size:13px;color:#6e6b79;text-align:center}
 .pagination button:not(:disabled):hover{background:#f4f0ff;border-color:#b9a8ff}
+
+
+.lyrics-actions{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.lyrics-action{border:0;border-radius:9px;background:#6c50df;color:#fff;padding:10px 14px;font-weight:650;cursor:pointer}
+.lyrics-print-note{font-size:12px;color:#777482;margin-top:20px}
+@media print{
+ body *{visibility:hidden!important}
+ .lyrics-overlay,.lyrics-overlay *{visibility:visible!important}
+ .lyrics-overlay{position:static!important;inset:auto!important;background:#fff!important;padding:0!important;display:block!important;overflow:visible!important}
+ .lyrics-panel{position:static!important;width:100%!important;max-width:none!important;max-height:none!important;overflow:visible!important;box-shadow:none!important;border:0!important;padding:0!important;color:#111!important}
+ .lyrics-actions,.lyrics-close,.lyrics-action,.lyrics-print-note{display:none!important}
+ .lyrics-content{white-space:pre-wrap!important;color:#111!important;font-size:12pt!important;line-height:1.6!important}
+ .lyrics-panel h2,.lyrics-artist{color:#111!important}
+}
