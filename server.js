@@ -82,7 +82,7 @@ function passwordMatches(password, user) {
   return actual.length === expected.length && timingSafeEqual(actual, expected);
 }
 async function currentUser(req) {
-  const token = String(req.headers.authorization || "").replace(/^Bearer\\s+/i, "");
+  const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
   if (!token) return null;
   const sessions = await readJsonFile(sessionsFile, {});
   const session = sessions[token];
@@ -180,7 +180,7 @@ const server = http.createServer(async (req, res) => {
       const name = String(body.name || "").trim().slice(0, 80);
       const email = String(body.email || "").trim().toLowerCase().slice(0, 180);
       const password = String(body.password || "");
-      if (name.length < 2 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 10) return json(res, 400, { error: "Informe nome, e-mail válido e senha com pelo menos 10 caracteres." });
+      if (name.length < 2 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || password.length < 10) return json(res, 400, { error: "Informe nome, e-mail válido e senha com pelo menos 10 caracteres." });
       const users = await readJsonFile(usersFile, []);
       if (users.some((user) => user.email === email)) return json(res, 409, { error: "Já existe uma conta com este e-mail." });
       const credentials = hashPassword(password);
@@ -212,7 +212,7 @@ const server = http.createServer(async (req, res) => {
     return user ? json(res, 200, { user: publicUser(user) }) : json(res, 401, { error: "Faça login para continuar." });
   }
   if (url.pathname === "/api/auth/logout" && req.method === "POST") {
-    const token = String(req.headers.authorization || "").replace(/^Bearer\\s+/i, "");
+    const token = String(req.headers.authorization || "").replace(/^Bearer\s+/i, "");
     const sessions = await readJsonFile(sessionsFile, {});
     delete sessions[token]; await writeJsonFile(sessionsFile, sessions);
     return json(res, 200, { ok: true });
@@ -240,7 +240,7 @@ const server = http.createServer(async (req, res) => {
       const description = String(body.description || "").trim().slice(0, 5000);
       const email = String(body.email || "").trim().toLowerCase().slice(0, 180);
       const user = await currentUser(req);
-      if (!subject || description.length < 10 || (!user && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))) return json(res, 400, { error: "Informe o assunto, descreva o problema com pelo menos 10 caracteres e forneça um e-mail válido se não estiver conectado." });
+      if (!subject || description.length < 10 || (!user && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) return json(res, 400, { error: "Informe o assunto, descreva o problema com pelo menos 10 caracteres e forneça um e-mail válido se não estiver conectado." });
       const tickets = await readJsonFile(ticketsFile, []);
       const ticket = { protocol: "SL-" + randomBytes(4).toString("hex").toUpperCase(), subject, description, email: user?.email || email, userId: user?.id || null, status: "Aberto", messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       tickets.unshift(ticket); await writeJsonFile(ticketsFile, tickets);
@@ -476,7 +476,7 @@ const server = http.createServer(async (req, res) => {
     const title = (url.searchParams.get("title") || "").trim().slice(0, 120);
     const artist = (url.searchParams.get("artist") || "").trim().slice(0, 120);
     if (!title && !artist) return json(res, 400, { error: "Informe o título ou o artista." });
-    const norm = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+    const norm = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     try {
       const queries = [...new Set([[title, artist].filter(Boolean).join(" "), title].filter(Boolean))];
       let results = [];
