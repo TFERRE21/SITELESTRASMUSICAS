@@ -193,8 +193,8 @@ export default function App() {
           </div>
           <div className="chart-toolbar">
             <div className="chart-country-tabs" aria-label="Selecionar ranking por país">
-              <button className={chartCountry === "br" ? "chart-tab chart-tab--active" : "chart-tab"} onClick={() => { setChartCountry("br"); setChartGenre("Todos"); }}>🇧🇷 Nacionais / Brasil</button>
-              <button className={chartCountry === "us" ? "chart-tab chart-tab--active" : "chart-tab"} onClick={() => { setChartCountry("us"); setChartGenre("Todos"); }}>🌎 Internacionais</button>
+              <button className={chartCountry === "br" ? "chart-tab chart-tab--active" : "chart-tab"} onClick={() => { setChartCountry("br"); setChartGenre("Todos"); }}>🇧🇷 Mais ouvidas no Brasil</button>
+              <button className={chartCountry === "us" ? "chart-tab chart-tab--active" : "chart-tab"} onClick={() => { setChartCountry("us"); setChartGenre("Todos"); }}>🌎 Ranking internacional (EUA)</button>
             </div>
             <label className="chart-genre-select">Gênero
               <select value={chartGenre} onChange={(event) => setChartGenre(event.target.value)}>
