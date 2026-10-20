@@ -187,3 +187,11 @@ body,.site-shell{background:#fff;color:#202027}
  .discover .search-box input{min-width:80px!important;flex:1 1 100px!important}
  .discover .search-submit{font-size:11px!important}
 }
+
+
+/* Capas reais nas linhas do catálogo */
+.track-artwork-photo{display:block;width:100%;height:100%;object-fit:cover;border-radius:8px;background:#f1eff8}
+.discover .track-card__image{position:relative;overflow:hidden}
+.discover .track-card__image>.track-artwork-photo{position:absolute;inset:0}
+.discover .track-card__image>.track-tag,.discover .track-card__image>.save-button{z-index:2}
+.discover .track-genre:empty{display:none}
