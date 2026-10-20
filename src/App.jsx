@@ -59,8 +59,8 @@ export default function App() {
         if (!active) return;
         setCatalogItems(Array.isArray(data.items) ? data.items : []);
         setCatalogMessage(data.items?.length
-          ? `Catálogo atualizado em ${data.lastSyncAt ? new Date(data.lastSyncAt).toLocaleString("pt-BR") : "última sincronização"}.`
-          : "Catálogo externo ainda não sincronizado. Configure a chave do provedor no VPS.");
+          ? `Catálogo LRCLIB disponível${data.lastSearchAt ? ` (última consulta ${new Date(data.lastSearchAt).toLocaleString("pt-BR")})` : ""}.`
+          : "Pesquise uma música ou artista para consultar o catálogo gratuito LRCLIB; não é necessária chave de API.");
       })
       .catch(() => { if (active) setCatalogMessage("Catálogo externo indisponível; exibindo exemplos demonstrativos."); });
     return () => { active = false; };
@@ -77,7 +77,7 @@ export default function App() {
         if (!response.ok) throw new Error(data.error || "Falha na pesquisa.");
         if (active && Array.isArray(data.items)) {
           setCatalogItems(data.items);
-          setCatalogMessage(data.source === "Musixmatch" ? "Resultados do catálogo Musixmatch." : "Resultados do catálogo local.");
+          setCatalogMessage(data.source === "LRCLIB" ? "Resultados encontrados no LRCLIB." : "Resultados do catálogo local.");
         }
       } catch (error) {
         if (active) setCatalogMessage(error.message || "Não foi possível pesquisar no catálogo externo.");
@@ -90,7 +90,7 @@ export default function App() {
     ? catalogItems.map((track, index) => ({
         ...track,
         color: ["lilac", "coral", "blue", "gold", "green", "pink"][index % 6],
-        tag: track.provider === "Musixmatch" ? "Catálogo real" : "Sincronizada",
+        tag: track.provider === "LRCLIB" ? "LRCLIB" : "Exemplo",
         genre: track.genre || "Música",
       }))
     : tracks;
@@ -177,7 +177,7 @@ export default function App() {
               <div className="track-card__body"><div><span className="track-genre">{track.genre}</span><h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id) { setNotice("Esta faixa é apenas um exemplo demonstrativo."); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
             </article>;
           })}</div> : <div className="empty-state"><Search size={25} /><h3>Nenhuma música encontrada</h3><p>Tente outro termo ou escolha uma categoria diferente.</p><button className="button button--secondary" onClick={() => { setQuery(""); setCategory("Todas"); }}>Limpar filtros</button></div>}
-          <div className="catalog-note"><span><Sparkles size={15} /> Conteúdo de demonstração</span><p>Artistas e faixas exibidos nesta página são exemplos ilustrativos, não um catálogo de lançamentos verificados.</p></div>
+          <div className="catalog-note"><span><Sparkles size={15} /> Catálogo LRCLIB</span><p>Os resultados dependem da disponibilidade no LRCLIB. Confira os termos e direitos aplicáveis antes de republicar letras completas em um site comercial.</p></div>
         </section>
 
         <section className="about-band" id="sobre"><div className="about-band__icon"><AudioLines size={29} /></div><div><span className="eyebrow">NOSSO PROPÓSITO</span><h2>Música aproxima. A gente ajuda você a descobrir.</h2><p>Um projeto em construção para tornar a descoberta musical mais simples, acolhedora e organizada.</p></div><button className="button button--light" onClick={() => setNotice("Obrigado pelo interesse! O canal de contato oficial será publicado após a configuração do e-mail institucional.")}>Saiba mais <ArrowRight size={17} /></button></section>
