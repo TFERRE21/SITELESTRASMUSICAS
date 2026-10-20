@@ -28,6 +28,9 @@ export default function App() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [lyrics, setLyrics] = useState(null);
   const [lyricsLoading, setLyricsLoading] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
+  const [video, setVideo] = useState(null);
+  const [videoError, setVideoError] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -68,11 +71,29 @@ export default function App() {
     } finally { setLoading(false); }
   };
 
+  const loadMusicVideo = async () => {
+    if (!lyrics) return;
+    setVideoLoading(true);
+    setVideoError("");
+    try {
+      const q = `${lyrics.title} ${lyrics.artist} official music video`;
+      const response = await fetch(`/api/music-video?q=${encodeURIComponent(q)}`);
+      const data = await response.json();
+      if (!response.ok || !data.video?.videoId) throw new Error(data.error || "Vídeo relacionado não encontrado.");
+      setVideo(data.video);
+    } catch (error) {
+      setVideoError(error.message || "Não foi possível carregar o vídeo.");
+    } finally {
+      setVideoLoading(false);
+    }
+  };
   const visibleChart = useMemo(() => chart.slice(0, 10), [chart]);
   const toggleSaved = (item) => setSaved((old) => old.some((x) => x.id === item.id) ? old.filter((x) => x.id !== item.id) : [...old, item]);
   const downloadLyrics = (item) => { const blob = new Blob([`${item.title} — ${item.artist}\\n\\n${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${item.title || "letra"}.txt`.replace(/[\\\\/:*?"<>|]/g, "-"); document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
 
   const openLyrics = async (item) => {
+    setVideo(null);
+    setVideoError("");
     setLyricsLoading(true);
     setLyrics({ title: item.title, artist: item.artist, text: "Carregando letra..." });
     try {
@@ -121,6 +142,6 @@ export default function App() {
     </main>
     <footer className="portal-footer"><div className="portal-footer__main"><a className="portal-brand" href="#"><span className="portal-brand__mark"><AudioLines size={22}/></span><span>som<span>&</span>letra</span></a><p>Descobrindo sons, conectando histórias.</p><nav><a href="#destaques">Destaques</a><a href="#artistas">Artistas</a><a href="#generos">Gêneros</a><a href="#busca">Pesquisar</a></nav></div><div className="portal-footer__bottom"><span>© {new Date().getFullYear()} {institutional.brandName || "Som & Letra"}. Todos os direitos reservados.</span><span>Dados musicais fornecidos por fontes externas. Letras completas exibidas apenas quando disponíveis e autorizadas.</span></div></footer>
 
-    {lyrics && <div className="portal-song-page" role="dialog" aria-modal="true" aria-label={`Música ${lyrics.title}`}><header className="portal-song-header"><a className="portal-brand" href="#inicio" onClick={()=>setLyrics(null)}><span className="portal-brand__mark"><AudioLines size={22}/></span><span>som<span>&</span>letra</span></a><div><button className="portal-song-action" onClick={()=>window.print()}><Printer size={16}/> Imprimir</button><button className="portal-song-action" onClick={()=>downloadLyrics(lyrics)}><Download size={16}/> Baixar letra</button><button className="portal-song-action" onClick={async()=>{try{await navigator.share({title:lyrics.title,text:`${lyrics.title} — ${lyrics.artist}`,url:window.location.href});}catch{}}}><Share2 size={16}/> Compartilhar</button><button className="portal-song-exit" onClick={()=>setLyrics(null)} aria-label="Voltar"><X size={20}/></button></div></header><main className="portal-song-main"><div className="portal-song-breadcrumb"><a href="#inicio" onClick={()=>setLyrics(null)}><Home size={14}/> Início</a><ChevronRight size={14}/><span>Artista / Música</span></div><h1>{lyrics.title}</h1><p className="portal-song-artist">{lyrics.artist}</p><div className="portal-song-columns"><section className="portal-song-lyrics"><h2>Letra da música</h2><div className="portal-song-lyrics-text">{lyricsLoading ? "Carregando letra..." : lyrics.text}</div><div className="portal-song-lyrics-actions"><button onClick={()=>window.print()}><Printer size={16}/> Imprimir</button><button onClick={()=>downloadLyrics(lyrics)}><Download size={16}/> Baixar letra</button><button onClick={async()=>{try{await navigator.share({title:lyrics.title,text:`${lyrics.title} — ${lyrics.artist}`,url:window.location.href});}catch{}}}><Share2 size={16}/> Compartilhar</button></div></section><aside className="portal-song-video"><a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(`${lyrics.title} ${lyrics.artist} videoclipe oficial`)}`} target="_blank" rel="noreferrer" className="portal-song-video-link"><span><Play size={30}/></span><strong>Vídeo relacionado no YouTube</strong><small>Abrir busca de vídeo</small></a><h2>Ouça e assista</h2><p>Encontre o clipe oficial ou vídeos relacionados a esta música.</p></aside></div><p className="portal-song-note">As letras são exibidas quando há conteúdo disponível para consulta.</p><button className="portal-song-back" onClick={()=>setLyrics(null)}>← Voltar aos resultados</button></main></div>}
+    {lyrics && <div className="portal-song-page" role="dialog" aria-modal="true" aria-label={`Música ${lyrics.title}`}><header className="portal-song-header"><a className="portal-brand" href="#inicio" onClick={()=>setLyrics(null)}><span className="portal-brand__mark"><AudioLines size={22}/></span><span>som<span>&</span>letra</span></a><div><button className="portal-song-action" onClick={()=>window.print()}><Printer size={16}/> Imprimir</button><button className="portal-song-action" onClick={()=>downloadLyrics(lyrics)}><Download size={16}/> Baixar letra</button><button className="portal-song-action" onClick={async()=>{try{await navigator.share({title:lyrics.title,text:`${lyrics.title} — ${lyrics.artist}`,url:window.location.href});}catch{}}}><Share2 size={16}/> Compartilhar</button><button className="portal-song-exit" onClick={()=>setLyrics(null)} aria-label="Voltar"><X size={20}/></button></div></header><main className="portal-song-main"><div className="portal-song-breadcrumb"><a href="#inicio" onClick={()=>setLyrics(null)}><Home size={14}/> Início</a><ChevronRight size={14}/><span>Artista / Música</span></div><h1>{lyrics.title}</h1><p className="portal-song-artist">{lyrics.artist}</p><div className="portal-song-columns"><section className="portal-song-lyrics"><h2>Letra da música</h2><div className="portal-song-lyrics-text">{lyricsLoading ? "Carregando letra..." : lyrics.text}</div><div className="portal-song-lyrics-actions"><button onClick={()=>window.print()}><Printer size={16}/> Imprimir</button><button onClick={()=>downloadLyrics(lyrics)}><Download size={16}/> Baixar letra</button><button onClick={async()=>{try{await navigator.share({title:lyrics.title,text:`${lyrics.title} — ${lyrics.artist}`,url:window.location.href});}catch{}}}><Share2 size={16}/> Compartilhar</button></div></section><aside className="portal-song-video"><h2>Vídeo relacionado</h2>{video ? <><div className="portal-video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId)}?rel=0`} title={`${lyrics.title} — vídeo relacionado`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen></iframe></div><p className="portal-video-caption">{video.title}{video.channel ? ` · ${video.channel}` : ""}</p><button className="portal-video-change" onClick={()=>{setVideo(null);loadMusicVideo();}}>Buscar outro vídeo</button></> : <><button className="portal-song-video-link" onClick={loadMusicVideo} disabled={videoLoading}><span><Play size={30}/></span><strong>{videoLoading ? "Localizando vídeo..." : "Carregar vídeo da música"}</strong><small>O vídeo será reproduzido aqui, sem sair do Som & Letra</small></button>{videoError && <p className="portal-video-error">{videoError}</p>}</>}<h3>Ouça e assista</h3><p>O player incorporado aparece aqui quando um vídeo relacionado for encontrado.</p></aside></div><p className="portal-song-note">As letras são exibidas quando há conteúdo disponível para consulta.</p><button className="portal-song-back" onClick={()=>setLyrics(null)}>← Voltar aos resultados</button></main></div>}
   </div>;
 }
