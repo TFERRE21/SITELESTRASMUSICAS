@@ -328,19 +328,49 @@ const server = http.createServer(async (req, res) => {
     const title = (url.searchParams.get("title") || "").trim().slice(0, 120);
     const artist = (url.searchParams.get("artist") || "").trim().slice(0, 120);
     if (!title && !artist) return json(res, 400, { error: "Informe o título ou o artista." });
+    const norm = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
     try {
-      const q = [title, artist].filter(Boolean).join(" ");
-      const results = await lrclib("/api/search", { q });
-      if (!Array.isArray(results) || !results.length) return json(res, 404, { error: "Não encontramos letra disponível para esta música." });
-      const norm = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+      const queries = [...new Set([[title, artist].filter(Boolean).join(" "), title].filter(Boolean))];
+      let results = [];
+      let lastUpstreamError = null;
+      for (const q of queries) {
+        try {
+          const found = await lrclib("/api/search", { q });
+          if (Array.isArray(found) && found.length) { results = found; break; }
+        } catch (error) {
+          lastUpstreamError = error;
+          // Try the title-only query when the combined query fails or the provider is temporarily unstable.
+        }
+      }
+      if (!results.length) {
+        const status = lastUpstreamError?.status === 503 || lastUpstreamError?.status === 502 ? 503 : lastUpstreamError?.status === 429 ? 429 : 404;
+        return json(res, status, { error: status === 503 ? "O serviço de letras está temporariamente instável. Tente novamente em instantes." : status === 429 ? "Muitas consultas foram feitas em sequência. Aguarde um pouco e tente novamente." : "Não encontramos letra disponível para esta música." });
+      }
       const exact = results.find((item) => norm(item.trackName) === norm(title) && (!artist || norm(item.artistName).includes(norm(artist)) || norm(artist).includes(norm(item.artistName))));
-      const match = exact || results.find((item) => norm(item.trackName).includes(norm(title)) && (!artist || norm(item.artistName).includes(norm(artist)))) || results[0];
-      const detail = await lrclib("/api/get/" + encodeURIComponent(match.id));
-      const lyrics = detail.plainLyrics || detail.syncedLyrics || "";
-      if (!lyrics) return json(res, 404, { error: "Encontramos a faixa, mas a fonte não disponibiliza a letra." });
+      const match = exact || results.find((item) => norm(item.trackName) === norm(title)) || results.find((item) => norm(item.trackName).includes(norm(title)) && (!artist || norm(item.artistName).includes(norm(artist)))) || results[0];
+      // Search responses may already contain lyrics; use them first to avoid an unnecessary second API call.
+      let detail = match;
+      let lyrics = match.plainLyrics || match.syncedLyrics || "";
+      if (!lyrics) {
+        try {
+          detail = await lrclib("/api/get/" + encodeURIComponent(match.id));
+          lyrics = detail.plainLyrics || detail.syncedLyrics || "";
+        } catch (error) {
+          // Try LRCLIB's metadata lookup as a second authorized path before reporting the temporary failure.
+          try {
+            detail = await lrclib("/api/get", { track_name: title || match.trackName, artist_name: artist || match.artistName });
+            lyrics = detail.plainLyrics || detail.syncedLyrics || "";
+          } catch (fallbackError) {
+            const status = fallbackError.status === 429 ? 429 : 503;
+            return json(res, status, { error: status === 429 ? "Muitas consultas foram feitas em sequência. Aguarde um pouco e tente novamente." : "O serviço de letras está temporariamente instável. Tente novamente em instantes." });
+          }
+        }
+      }
+      if (!lyrics) return json(res, 404, { error: "Encontramos a música, mas a fonte não disponibiliza a letra." });
       return json(res, 200, { lyrics, provider: "LRCLIB", trackName: detail.trackName || match.trackName, artistName: detail.artistName || match.artistName, instrumental: Boolean(detail.instrumental) });
     } catch (error) {
-      return json(res, error.status === 429 ? 429 : 502, { error: error.message || "Não foi possível consultar a letra agora.", retryAfter: error.retryAfter || null });
+      const status = error.status === 429 ? 429 : error.status === 503 ? 503 : 502;
+      return json(res, status, { error: status === 503 ? "O serviço de letras está temporariamente instável. Tente novamente em instantes." : error.message || "Não foi possível consultar a letra agora.", retryAfter: error.retryAfter || null });
     }
   }
   if (req.method === "GET" && url.pathname.startsWith("/api/lyrics/")) {
