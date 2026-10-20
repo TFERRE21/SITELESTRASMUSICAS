@@ -102,6 +102,19 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
+  if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
+    if (!q) return json(res, 400, { error: "Informe o nome da música ou artista no parâmetro q." });
+    const encoded = encodeURIComponent(q);
+    return json(res, 200, {
+      query: q,
+      sources: [
+        { name: "Letras.mus.br", type: "external-search", url: "https://www.letras.mus.br/?q=" + encoded, lyricsCopied: false },
+        { name: "LRCLIB", type: "internal-provider", url: "/api/catalog?q=" + encoded, lyricsCopied: false }
+      ],
+      note: "Letras.mus.br é aberto como busca externa. Este endpoint não raspa nem copia letras; qualquer integração automatizada deve usar API ou autorização oficial da fonte."
+    });
+  }
   if (req.method === "GET" && url.pathname === "/api/catalog/status") {
     return json(res, 200, { robot: "Som & Letra", running: robotRunning, cachedItems: cachedCatalog.length, lastSearchAt, robotLastRunAt, robotLastError, nextAttemptAt: robotNextAllowedAt, consecutiveErrors: robotConsecutiveErrors, intervalSeconds: ROBOT_INTERVAL_MS / 1000, source: "LRCLIB" });
   }
