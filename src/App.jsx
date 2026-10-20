@@ -182,8 +182,75 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   const saveCurrentSong = () => { if (lyrics?.id) toggleSaved({...lyrics, id:lyrics.id, title:lyrics.title, artist:lyrics.artist}); else setMessage("Pesquise esta música no catálogo para adicioná-la aos favoritos."); };
   const downloadCurrentSong = () => {
     if (!lyrics) return;
-    const blob = new Blob([`${lyrics.title} — ${lyrics.artist}\\n\\n${lyrics.text || ""}`], {type:"text/plain;charset=utf-8"});
-    const url=URL.createObjectURL(blob); const a=document.createElement("a"); a.href=url; a.download=`${lyrics.title || "musica"}.txt`.replace(/[\\\\/:*?"<>|]/g,"-"); document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    const safePdfText = (value) => String(value ?? "")
+      .normalize("NFC")
+      .replace(/[–—]/g, "-").replace(/[’‘]/g, "'").replace(/[“”]/g, '"')
+      .replace(/[^\x20-\x7E\xA0-\xFF]/g, "?");
+    const pdfEscape = (value) => safePdfText(value).replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+    const wrapLine = (line, width = 88) => {
+      const words = safePdfText(line).split(/\s+/).filter(Boolean);
+      const result = [];
+      let current = "";
+      for (const word of words) {
+        if (current && (current + " " + word).length > width) {
+          result.push(current);
+          current = word;
+        } else current = current ? current + " " + word : word;
+      }
+      if (current) result.push(current);
+      return result.length ? result : [""];
+    };
+    const rawLines = String(lyrics.text || "Letra não disponível nesta fonte.").replace(/\r/g, "").split("\n");
+    const lyricLines = rawLines.flatMap((line) => wrapLine(line));
+    const linesPerPage = 41;
+    const pageLines = [];
+    for (let i = 0; i < lyricLines.length; i += linesPerPage) pageLines.push(lyricLines.slice(i, i + linesPerPage));
+    if (!pageLines.length) pageLines.push([""]);
+    const streams = pageLines.map((lines, pageIndex) => {
+      const commands = [];
+      commands.push("BT /F1 18 Tf 54 790 Td (" + pdfEscape(lyrics.title || "Letra") + ") Tj ET");
+      commands.push("BT /F1 11 Tf 54 770 Td (" + pdfEscape(lyrics.artist || "Artista não informado") + ") Tj ET");
+      commands.push("BT /F1 10 Tf 54 744 Td (" + pdfEscape(pageIndex ? "Letra (continuação)" : "Letra da música") + ") Tj ET");
+      lines.forEach((line, index) => {
+        const y = 718 - index * 15;
+        commands.push("BT /F1 11 Tf 54 " + y + " Td (" + pdfEscape(line) + ") Tj ET");
+      });
+      commands.push("BT /F1 8 Tf 54 28 Td (" + pdfEscape("Site Músicas - conteúdo fornecido pela fonte consultada") + ") Tj ET");
+      commands.push("BT /F1 8 Tf 520 28 Td (" + (pageIndex + 1) + "/" + pageLines.length + ") Tj ET");
+      return commands.join("\n");
+    });
+    const objects = [];
+    objects[1] = "<< /Type /Catalog /Pages 2 0 R >>";
+    const pageRefs = streams.map((_, index) => (4 + index * 2) + " 0 R").join(" ");
+    objects[2] = "<< /Type /Pages /Kids [" + pageRefs + "] /Count " + streams.length + " >>";
+    objects[3] = "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>";
+    streams.forEach((stream, index) => {
+      const pageObject = 4 + index * 2;
+      const streamObject = pageObject + 1;
+      objects[pageObject] = "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents " + streamObject + " 0 R >>";
+      objects[streamObject] = "<< /Length " + stream.length + " >>\nstream\n" + stream + "\nendstream";
+    });
+    let pdf = "%PDF-1.4\n";
+    const offsets = [0];
+    for (let id = 1; id < objects.length; id++) {
+      offsets[id] = pdf.length;
+      pdf += id + " 0 obj\n" + objects[id] + "\nendobj\n";
+    }
+    const xrefOffset = pdf.length;
+    pdf += "xref\n0 " + objects.length + "\n0000000000 65535 f \n";
+    for (let id = 1; id < objects.length; id++) pdf += String(offsets[id]).padStart(10, "0") + " 00000 n \n";
+    pdf += "trailer\n<< /Size " + objects.length + " /Root 1 0 R >>\nstartxref\n" + xrefOffset + "\n%%EOF";
+    const bytes = new Uint8Array(pdf.length);
+    for (let i = 0; i < pdf.length; i++) bytes[i] = pdf.charCodeAt(i) & 0xff;
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = (lyrics.title || "letra") + ".pdf".replace(/[\\\\/:*?"<>|]/g, "-");
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   return <div className={lyrics ? "portal portal--song-open" : "portal"}>
