@@ -243,6 +243,25 @@ const server = http.createServer(async (req, res) => {
       return json(res, error.status === 429 ? 429 : 502, { error: error.message || "Não foi possível consultar LRCLIB.", items: [], provider: "LRCLIB", retryAfter: error.retryAfter || null });
     }
   }
+  if (req.method === "GET" && url.pathname === "/api/lyrics/search") {
+    const title = (url.searchParams.get("title") || "").trim().slice(0, 120);
+    const artist = (url.searchParams.get("artist") || "").trim().slice(0, 120);
+    if (!title && !artist) return json(res, 400, { error: "Informe o título ou o artista." });
+    try {
+      const q = [title, artist].filter(Boolean).join(" ");
+      const results = await lrclib("/api/search", { q });
+      if (!Array.isArray(results) || !results.length) return json(res, 404, { error: "Não encontramos letra disponível para esta música." });
+      const norm = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+      const exact = results.find((item) => norm(item.trackName) === norm(title) && (!artist || norm(item.artistName).includes(norm(artist)) || norm(artist).includes(norm(item.artistName))));
+      const match = exact || results.find((item) => norm(item.trackName).includes(norm(title)) && (!artist || norm(item.artistName).includes(norm(artist)))) || results[0];
+      const detail = await lrclib("/api/get/" + encodeURIComponent(match.id));
+      const lyrics = detail.plainLyrics || detail.syncedLyrics || "";
+      if (!lyrics) return json(res, 404, { error: "Encontramos a faixa, mas a fonte não disponibiliza a letra." });
+      return json(res, 200, { lyrics, provider: "LRCLIB", trackName: detail.trackName || match.trackName, artistName: detail.artistName || match.artistName, instrumental: Boolean(detail.instrumental) });
+    } catch (error) {
+      return json(res, error.status === 429 ? 429 : 502, { error: error.message || "Não foi possível consultar a letra agora.", retryAfter: error.retryAfter || null });
+    }
+  }
   if (req.method === "GET" && url.pathname.startsWith("/api/lyrics/")) {
     const id = url.pathname.split("/").pop();
     if (!/^\d+$/.test(id)) return json(res, 400, { error: "Identificador de faixa inválido." });
