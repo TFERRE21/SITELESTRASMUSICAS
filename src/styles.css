@@ -120,3 +120,40 @@ body,.site-shell{background:#fff;color:#202027}
 .lyrics-close{background:#f6f4fb;border-color:#e2ddec;color:#33323d}
 .lyrics-artist{color:#6248d8}
 @media(max-width:760px){.main-nav{background:#fff;border-color:#e8e8ef}.main-nav a{border-color:#eeeef3}}
+
+
+/* Catálogo em linhas compactas, na mesma linguagem visual do Top 20 */
+.discover .filters{display:flex;align-items:center;justify-content:flex-start;flex-wrap:wrap;gap:12px}
+.discover .search-box{max-width:520px;flex:1 1 380px;min-width:260px;height:48px;padding:0 8px 0 14px}
+.discover .search-box input{font-size:13px}
+.search-submit{display:inline-flex;align-items:center;justify-content:center;gap:7px;white-space:nowrap;border:0;border-radius:7px;padding:10px 12px;background:#6c50df;color:#fff;font-size:12px;font-weight:700}
+.search-submit:disabled{opacity:.45;cursor:not-allowed}
+.letras-search-link{color:#6048d8;white-space:nowrap}
+.discover .category-list{flex-basis:100%;margin-top:3px}
+.discover .track-grid{grid-template-columns:1fr;gap:9px}
+.discover .track-card{display:flex;align-items:center;min-height:90px;border-radius:12px;box-shadow:none;background:#fff}
+.discover .track-card__image{width:66px;height:66px;flex:0 0 66px;margin:11px;border-radius:8px;overflow:hidden}
+.discover .track-card__image .artwork{border-radius:8px}
+.discover .track-card__image .artwork__number{display:none}
+.discover .track-card__image .artwork__mark{width:25px;height:25px}
+.discover .track-tag{top:4px;left:4px;padding:3px 4px;font-size:7px}
+.discover .save-button{top:4px;right:4px;width:23px;height:23px}
+.discover .save-button svg{width:13px;height:13px}
+.discover .track-card__body{flex:1;min-width:0;padding:12px 14px 12px 3px}
+.discover .track-card h3{font-size:14px;margin:4px 0}
+.discover .track-card p{font-size:12px}
+.discover .track-genre{font-size:9px}
+.discover .track-card__arrow{width:36px;height:36px;margin-right:13px}
+@media(max-width:760px){
+ .discover .filters{gap:10px}
+ .discover .search-box{flex-basis:100%;min-width:0;max-width:none}
+ .search-submit{padding:9px}
+ .search-submit span{display:inline}
+ .discover .category-list{margin-top:5px}
+ .discover .track-card{min-height:82px}
+ .discover .track-card__image{width:54px;height:54px;flex-basis:54px;margin:9px}
+ .discover .track-card__body{padding-right:5px}
+ .discover .track-card h3{font-size:12px}
+ .discover .track-card p{font-size:10px}
+ .discover .track-card__arrow{width:30px;height:30px;margin-right:9px}
+}
