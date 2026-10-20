@@ -16,6 +16,8 @@ let robotRunning = false;
 let robotLastRunAt = null;
 let robotLastError = null;
 let robotQueryIndex = 0;
+let robotNextAllowedAt = null;
+let robotConsecutiveErrors = 0;
 const ROBOT_INTERVAL_MS = 60_000;
 const ROBOT_QUERIES = ["gospel", "sertanejo", "MPB", "pop brasileiro", "rock brasileiro", "rap brasileiro", "funk brasileiro", "pagode", "samba", "forró", "reggae", "música eletrônica", "indie brasileiro", "jazz", "música clássica", "bossa nova", "country", "metal", "música latina", "louvor", "hinos", "Chitãozinho Xororó", "Marília Mendonça", "Legião Urbana", "Anitta", "Roberto Carlos", "Gilberto Gil", "Djavan", "Gusttavo Lima", "Adele"];
 
@@ -101,7 +103,7 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
   if (req.method === "GET" && url.pathname === "/api/catalog/status") {
-    return json(res, 200, { robot: "Som & Letra", running: robotRunning, cachedItems: cachedCatalog.length, lastSearchAt, robotLastRunAt, robotLastError, intervalSeconds: ROBOT_INTERVAL_MS / 1000, source: "LRCLIB" });
+    return json(res, 200, { robot: "Som & Letra", running: robotRunning, cachedItems: cachedCatalog.length, lastSearchAt, robotLastRunAt, robotLastError, nextAttemptAt: robotNextAllowedAt, consecutiveErrors: robotConsecutiveErrors, intervalSeconds: ROBOT_INTERVAL_MS / 1000, source: "LRCLIB" });
   }
   if (req.method === "GET" && url.pathname === "/api/catalog") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
@@ -139,20 +141,27 @@ const server = http.createServer(async (req, res) => {
 
 async function robotCollectOneQuery() {
   if (robotRunning) return;
+  if (robotNextAllowedAt && Date.now() < Date.parse(robotNextAllowedAt)) return;
   robotRunning = true;
   const q = ROBOT_QUERIES[robotQueryIndex % ROBOT_QUERIES.length];
-  robotQueryIndex += 1;
   try {
     const results = await lrclib("/api/search", { q });
     const items = Array.isArray(results) ? results.map(normalizeTrack) : [];
     await saveCatalog(items);
     robotLastRunAt = new Date().toISOString();
     robotLastError = null;
+    robotConsecutiveErrors = 0;
+    robotNextAllowedAt = null;
+    robotQueryIndex += 1;
     console.info("[catalog-robot] consulta " + q + ": " + items.length + " resultados; total local " + cachedCatalog.length + ".");
   } catch (error) {
     robotLastRunAt = new Date().toISOString();
     robotLastError = error.message || "Falha na coleta automática.";
-    console.warn("[catalog-robot] " + robotLastError);
+    robotConsecutiveErrors += 1;
+    const retryHeader = Number.parseInt(error.retryAfter || "", 10);
+    const delayMs = error.status === 429 && Number.isFinite(retryHeader) && retryHeader > 0 ? retryHeader * 1000 : Math.min(30 * 60_000, 5 * 60_000 * robotConsecutiveErrors);
+    robotNextAllowedAt = new Date(Date.now() + delayMs).toISOString();
+    console.warn("[catalog-robot] " + robotLastError + "; nova tentativa em " + Math.round(delayMs / 60000) + " minuto(s).");
   } finally { robotRunning = false; }
 }
 
