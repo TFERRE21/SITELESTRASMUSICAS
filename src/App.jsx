@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { AudioLines, Search, Music2, Heart, Menu, X, ArrowRight, ChevronRight, Play, Disc3, Mic2, Headphones, Sparkles, Printer, Download, Share2, Youtube, Home } from "lucide-react";
+import { AudioLines, Search, Music2, Heart, Menu, X, ArrowRight, ChevronRight, Play, Disc3, Mic2, Headphones, Sparkles, Printer, Download, Share2, Youtube, Home, UserRound, LifeBuoy, Send, LogOut, CircleUserRound, ListMusic } from "lucide-react";
 import { institutional } from "./config/institutional.js";
 
 const genres = ["Todos", "Gospel", "Sertanejo", "MPB", "Pop", "Rock", "Rap", "Funk", "Pagode", "Samba", "Forró", "Reggae", "Indie", "Jazz", "Música Latina"];
@@ -31,6 +31,21 @@ export default function App() {
   const [videoLoading, setVideoLoading] = useState(false);
   const [video, setVideo] = useState(null);
   const [videoError, setVideoError] = useState("");
+  const [account, setAccount] = useState(null);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const [supportOpen, setSupportOpen] = useState(false);
+  const [authMode, setAuthMode] = useState("register");
+  const [authName, setAuthName] = useState("");
+  const [authEmail, setAuthEmail] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authBusy, setAuthBusy] = useState(false);
+  const [supportSubject, setSupportSubject] = useState("Problemas com músicas ou letras");
+  const [supportDescription, setSupportDescription] = useState("");
+  const [supportEmail, setSupportEmail] = useState("");
+  const [supportBusy, setSupportBusy] = useState(false);
+  const [supportError, setSupportError] = useState("");
+  const [ticketResult, setTicketResult] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -92,7 +107,7 @@ export default function App() {
   }, [lyrics?.title, lyrics?.artist, lyrics?.text]);
 
   const visibleChart = useMemo(() => chart.slice(0, 10), [chart]);
-  const toggleSaved = (item) => setSaved((old) => old.some((x) => x.id === item.id) ? old.filter((x) => x.id !== item.id) : [...old, item]);
+  const toggleSaved = (item) => { setSaved((old) => { const next = old.some((x) => x.id === item.id) ? old.filter((x) => x.id !== item.id) : [...old, item]; const token = window.localStorage.getItem("somletra_token"); if (token) fetch("/api/account/favorites", { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ favorites: next }) }).then(async (r) => { if (!r.ok) { const d = await r.json(); setMessage(d.error || "Não foi possível sincronizar os favoritos."); } }).catch(() => setMessage("Não foi possível sincronizar os favoritos.")); else setMessage("Entre em Meus Dados para manter seus favoritos salvos na conta."); return next; }); };\n  const submitAuth = async (event) => { event.preventDefault(); setAuthBusy(true); setAuthError(""); try { const response = await fetch(authMode === "register" ? "/api/auth/register" : "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: authName, email: authEmail, password: authPassword }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível autenticar."); window.localStorage.setItem("somletra_token", data.token); setAccount(data.user); setSaved(data.user.favorites || []); setAuthPassword(""); } catch (error) { setAuthError(error.message || "Falha ao conectar."); } finally { setAuthBusy(false); } };\n  const signOut = async () => { const token = window.localStorage.getItem("somletra_token"); if (token) await fetch("/api/auth/logout", { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => {}); window.localStorage.removeItem("somletra_token"); setAccount(null); setSaved([]); setAuthMode("login"); };\n  const submitSupport = async (event) => { event.preventDefault(); setSupportBusy(true); setSupportError(""); setTicketResult(null); try { const token = window.localStorage.getItem("somletra_token"); const response = await fetch("/api/support/tickets", { method: "POST", headers: { "Content-Type": "application/json", ...(token ? { Authorization: "Bearer " + token } : {}) }, body: JSON.stringify({ subject: supportSubject, description: supportDescription, email: supportEmail }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível registrar o chamado."); setTicketResult(data.ticket); setSupportDescription(""); } catch (error) { setSupportError(error.message || "Falha ao registrar o chamado."); } finally { setSupportBusy(false); } };
   const downloadLyrics = (item) => { const blob = new Blob([`${item.title} — ${item.artist}\\n\\n${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObjectURL(blob); const link = document.createElement("a"); link.href = url; link.download = `${item.title || "letra"}.txt`.replace(/[\\\\/:*?"<>|]/g, "-"); document.body.appendChild(link); link.click(); link.remove(); URL.revokeObjectURL(url); };
 
   const openLyrics = async (item) => {
@@ -115,11 +130,7 @@ export default function App() {
     <div className="portal-topline"><span><Sparkles size={13}/> Descubra a história por trás de cada música</span><span className="portal-topline__right">Música conecta pessoas</span></div>
     <header className="portal-header">
       <a className="portal-brand" href="#" aria-label="Som & Letra início"><span className="portal-brand__mark"><AudioLines size={24}/></span><span>som<span>&</span>letra</span></a>
-      <nav className={mobileOpen ? "portal-nav portal-nav--open" : "portal-nav"}>
-        <a href="#inicio" onClick={() => setMobileOpen(false)}>Início</a><a href="#destaques" onClick={() => setMobileOpen(false)}>Destaques</a><a href="#artistas" onClick={() => setMobileOpen(false)}>Artistas</a><a href="#generos" onClick={() => setMobileOpen(false)}>Gêneros</a>
-      </nav>
-      <div className="portal-header-actions"><a href="#busca" className="portal-search-link"><Search size={17}/> Buscar música</a><button className="portal-mobile-menu" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">{mobileOpen ? <X/> : <Menu/>}</button></div>
-    </header>
+       <nav className={mobileOpen ? "portal-nav portal-nav--open" : "portal-nav"}><a href="#inicio" onClick={() => setMobileOpen(false)}>Início</a><a href="#busca" onClick={() => setMobileOpen(false)}>Explorar</a><a href="#destaques" onClick={() => setMobileOpen(false)}>Top 10</a><a href="#generos" onClick={() => setMobileOpen(false)}>Gêneros</a><a href="#artistas" onClick={() => setMobileOpen(false)}>Artistas</a><button onClick={() => { setProfileOpen(true); setMobileOpen(false); }}>Meus Dados</button><button onClick={() => { setSupportOpen(true); setMobileOpen(false); }}>Suporte</button><button onClick={() => { setProfileOpen(true); setMobileOpen(false); }}><Heart size={14}/> Favoritos</button></nav><div className="portal-header-actions"><a href="#busca" className="portal-search-link"><Search size={17}/> Buscar música</a><button className="portal-account-button" onClick={() => setProfileOpen(true)}><UserRound size={16}/><span>{account ? account.name.split(" ")[0] : "Meus Dados"}</span></button><button className="portal-mobile-menu" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">{mobileOpen ? <X/> : <Menu/>}</button></div></header>
 
     <main id="inicio">
       <section className="portal-hero">
