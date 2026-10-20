@@ -168,6 +168,7 @@ export default function App() {
           </div>
           <div className="filters">
             <div className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar música, artista ou estilo..." aria-label="Buscar música, artista ou estilo" /><kbd>⌕</kbd></div>
+            {query.trim().length >= 2 && <a className="text-link" href={`https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}`} target="_blank" rel="noreferrer">Buscar também no Letras.mus.br <ArrowRight size={15} /></a>}
             <div className="category-list" id="generos" aria-label="Filtrar por gênero">
               {categories.map((item) => <button key={item} className={category === item ? "category category--active" : "category"} onClick={() => { setCategory("Todas"); setQuery(item === "Todas" ? "" : item); }}>{item}</button>)}
             </div>
