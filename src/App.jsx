@@ -221,9 +221,9 @@ export default function App() {
             <div><span className="eyebrow"><span className="eyebrow__line" /> EXPLORE NO SEU RITMO</span><h2>Descubra seu próximo <span>favorito.</span></h2><p>Pesquise músicas do catálogo conectado e descubra novos artistas.</p><p className="catalog-status" role="status">{catalogMessage}</p></div>
             <div className="discover__count"><span className="count-dot" /> {filteredTracks.length} resultados</div>
           </div>
-          <div className="filters">
-            <div className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar música, artista ou estilo..." aria-label="Buscar música, artista ou estilo" /><kbd>⌕</kbd></div>
-            {query.trim().length >= 2 && <a className="text-link" href={`https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}`} target="_blank" rel="noreferrer">Buscar também no Letras.mus.br <ArrowRight size={15} /></a>}
+          <form className="filters" onSubmit={(event) => { event.preventDefault(); const term = query.trim(); if (term.length >= 2) window.open(`https://www.letras.mus.br/?q=${encodeURIComponent(term)}`, "_blank", "noopener,noreferrer"); }}>
+            <div className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite música ou artista..." aria-label="Buscar música ou artista" /><button className="search-submit" type="submit" disabled={query.trim().length < 2}><Search size={16} /><span>Pesquisar música</span></button></div>
+            <a className="text-link letras-search-link" href={query.trim().length >= 2 ? `https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}` : "https://www.letras.mus.br/"} target="_blank" rel="noreferrer">Buscar no Letras.mus.br <ArrowRight size={15} /></a>
             <div className="category-list" id="generos" aria-label="Filtrar por gênero">
               {categories.map((item) => <button key={item} className={category === item ? "category category--active" : "category"} onClick={() => { setCategory("Todas"); setQuery(item === "Todas" ? "" : item); }}>{item}</button>)}
             </div>
