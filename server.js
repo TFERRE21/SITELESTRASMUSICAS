@@ -78,7 +78,6 @@ function hashPassword(password, salt = randomBytes(16).toString("hex")) {
 }
 function passwordMatches(password, user) {
   if (!user || typeof user.salt !== "string" || !user.salt) return false;
-  // Cadastro grava o hash em "hash"; aceita o nome antigo também.
   const storedHash = typeof user.passwordHash === "string" ? user.passwordHash : user.hash;
   if (typeof storedHash !== "string" || !/^[a-f0-9]{128}$/i.test(storedHash)) return false;
   try {
