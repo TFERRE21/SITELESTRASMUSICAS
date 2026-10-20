@@ -424,3 +424,88 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 @media(max-width:700px){.portal-section{padding-top:44px;padding-bottom:44px}.portal-feature-grid{gap:13px}.portal-feature{border-radius:15px}.portal-feature__info{padding:12px}.portal-hero{border-radius:20px}}
 
 .portal-chart-source{display:flex;align-items:center;gap:8px;margin:18px 0 22px;padding:12px 15px;border:1px solid #eee4c7;border-radius:12px;background:#fffaf0;color:#7b611a;font-size:12px;line-height:1.6}
+
+/* REFERENCE SONG PAGE: Site Músicas */
+.reference-site-header{position:sticky;top:0;z-index:35;background:#080d25;color:#fff;box-shadow:0 8px 28px rgba(5,10,35,.25)}
+.reference-site-header__top{min-height:76px;padding:12px clamp(18px,3.4vw,48px);display:grid;grid-template-columns:225px minmax(250px,1fr) auto;align-items:center;gap:24px;background:radial-gradient(ellipse at 40% 0%,rgba(117,45,130,.45),transparent 48%),#080d25}
+.reference-brand{display:inline-flex;align-items:center;gap:9px;color:#fff;text-decoration:none;min-width:0}
+.reference-brand__note{display:grid;place-items:center;color:#ffd600}
+.reference-brand__words{display:flex;flex-direction:column;line-height:1.05}
+.reference-brand__words strong{font-family:Manrope,sans-serif;font-size:24px;font-weight:800;letter-spacing:-.8px;white-space:nowrap}
+.reference-brand__words em{font-style:normal;color:#ffdf00}
+.reference-brand__words small{margin-top:5px;font-size:8px;font-weight:700;letter-spacing:2px;white-space:nowrap}
+.reference-header-search{height:44px;background:#fff;border:1px solid #dddfe8;border-radius:24px;display:flex;align-items:center;gap:10px;padding:0 0 0 16px;overflow:hidden;color:#33384b}
+.reference-header-search input{border:0;outline:0;min-width:0;flex:1;background:transparent;color:#171b2a;font:inherit;font-size:13px}
+.reference-header-search>button{height:44px;width:56px;border:0;background:#ffdb00;color:#10142b;display:grid;place-items:center;cursor:pointer}
+.reference-quick-actions{display:flex;align-items:center;gap:15px}
+.reference-quick-actions button{border:0;background:transparent;color:#fff;display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.reference-quick-actions .reference-yellow{padding:11px 15px;color:#10142b}
+.reference-site-nav{min-height:44px;padding:0 clamp(18px,3.4vw,48px);display:flex;align-items:center;gap:clamp(14px,2.4vw,32px);border-top:1px solid rgba(255,255,255,.1);background:#080d25}
+.reference-site-nav a,.reference-site-nav>button{display:inline-flex;align-items:center;gap:7px;text-decoration:none;background:transparent;border:0;color:#f7f8ff;font:inherit;font-size:12px;font-weight:650;white-space:nowrap;padding:14px 0;cursor:pointer}
+.reference-site-nav a:first-child{border-bottom:3px solid #ffdc00;color:#ffdc00}
+.reference-site-nav>button{margin-left:auto}
+.reference-yellow{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid #f4d000!important;background:#ffdb00!important;color:#11152a!important;border-radius:10px;padding:10px 17px;font-weight:750;cursor:pointer}
+.portal--song-open .portal-topline,.portal--song-open>.portal-header,.portal--song-open>main,.portal--song-open>.portal-footer{display:none}
+.portal--song-open{background:#f2f5f9;min-height:100vh}
+.portal--song-open .reference-site-header{margin-bottom:0}
+.reference-song-page{max-width:1500px;margin:0 auto;padding:16px clamp(16px,2vw,28px) 0;color:#15192a}
+.reference-breadcrumb{height:20px;display:flex;align-items:center;gap:8px;font-size:12px;color:#7c8496;margin-bottom:10px}
+.reference-breadcrumb a{color:#2164bb;text-decoration:none}
+.reference-breadcrumb span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.reference-song-hero{display:grid;grid-template-columns:132px minmax(0,1fr);gap:17px;padding:7px 15px 12px;background:linear-gradient(130deg,#fff,#fafbfe);border:1px solid #e8edf4;border-radius:10px;margin-bottom:12px;box-shadow:0 3px 12px rgba(18,36,70,.025)}
+.reference-song-cover{width:132px;height:150px;object-fit:cover;border-radius:7px;align-self:center;background:#e6eaf2}
+.reference-song-meta{display:flex;flex-direction:column;justify-content:center;min-width:0}
+.reference-song-meta h1{margin:0 0 3px;font-family:Manrope,sans-serif;font-size:clamp(23px,2vw,30px);letter-spacing:-.8px;line-height:1.25;color:#10172a;overflow-wrap:anywhere}
+.reference-song-artist{margin:0 0 7px;font-size:15px;color:#353c4f}
+.reference-song-album{margin:0;color:#4f586b;font-size:12px;line-height:1.7}
+.reference-song-actions{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:13px}
+.reference-song-actions button,.reference-font-controls button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px;padding:0 13px;border:1px solid #dbe2ed;border-radius:8px;background:#fff;color:#182036;font:inherit;font-size:12px;font-weight:650;cursor:pointer}
+.reference-song-actions button:hover,.reference-font-controls button:hover{border-color:#aab8d5;background:#f8faff}
+.reference-song-actions .reference-yellow{border-color:#f4d000!important}
+.reference-song-actions .reference-save{margin-left:auto;color:#272e42}
+.reference-song-actions .reference-save.is-saved{color:#e43b55;border-color:#ffd3da;background:#fff7f8}
+.reference-font-controls{display:flex;gap:0;margin-left:8px}
+.reference-font-controls button{border-radius:0}
+.reference-font-controls button:first-child{border-radius:8px 0 0 8px}
+.reference-font-controls button:last-child{border-radius:0 8px 8px 0;border-left:0}
+.reference-song-grid{display:grid;grid-template-columns:minmax(300px,1.08fr) minmax(300px,1fr) minmax(220px,.63fr);gap:15px;align-items:start}
+.reference-lyrics-card,.reference-video-card,.reference-related-card,.reference-other-songs{background:#fff;border:1px solid #e8edf4;border-radius:10px;box-shadow:0 3px 12px rgba(18,36,70,.025)}
+.reference-lyrics-card{padding:16px 19px 18px;min-height:410px}
+.reference-lyrics-card h2,.reference-video-card h2,.reference-related-card h2,.reference-other-heading h2{margin:0;color:#11182a;font-family:Manrope,sans-serif;font-size:18px;font-weight:800;letter-spacing:-.45px}
+.reference-lyrics-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.72;color:#2c3342;padding:12px 4px 17px}
+.reference-rights-note{font-size:10px;color:#727d91}
+.reference-video-column,.reference-side-column{display:grid;gap:14px;min-width:0}
+.reference-video-card{padding:15px}
+.reference-video-card>h2{font-size:16px;margin-bottom:12px}
+.reference-video-frame{width:100%;aspect-ratio:16/9;border-radius:8px;overflow:hidden;background:#060912}
+.reference-video-frame iframe{width:100%;height:100%;border:0;display:block}
+.reference-video-details{display:grid;grid-template-columns:1fr auto;gap:5px 10px;padding:13px 2px 2px}
+.reference-video-details strong{font-size:13px;line-height:1.35}
+.reference-video-details>span{grid-column:1;color:#737c8d;font-size:11px}
+.reference-video-details>a{grid-column:2;grid-row:1/3;align-self:center;display:flex;align-items:center;gap:4px;color:#4536c7;font-size:11px;text-decoration:none;padding:9px 10px;border:1px solid #dcd9ff;border-radius:8px;white-space:nowrap}
+.reference-video-empty{min-height:220px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:18px;text-align:center;color:#7a37c5;background:linear-gradient(145deg,#f7f5ff,#f6f9ff);border-radius:8px}
+.reference-video-empty strong{color:#20243a;font-size:14px}
+.reference-video-empty p{margin:0;color:#737b8d;font-size:12px;line-height:1.5}
+.reference-related-card{padding:14px;min-width:0}
+.reference-related-card h2{font-size:15px;margin-bottom:12px}
+.reference-related-card>button{width:100%;display:grid;grid-template-columns:62px minmax(0,1fr) 14px;gap:10px;align-items:center;padding:0;margin:0 0 10px;background:transparent;border:0;text-align:left;cursor:pointer;color:#171b2b}
+.reference-related-card>button:last-child{margin-bottom:0}
+.reference-related-card .music-cover{width:62px;height:52px;object-fit:cover;border-radius:5px;background:#e8ebf5}
+.reference-related-card>button>span{min-width:0;display:flex;flex-direction:column;gap:4px}
+.reference-related-card>button strong{font-size:11px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.reference-related-card>button small{font-size:10px;color:#767f92;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.reference-related-card>button>svg{color:#8b94a5}
+.reference-related-card>p,.reference-other-songs>p{font-size:12px;color:#778094;line-height:1.6}
+.reference-other-songs{padding:14px 16px 16px;margin-top:14px}
+.reference-other-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.reference-other-heading h2{font-size:16px}
+.reference-other-heading>a{display:flex;align-items:center;gap:3px;color:#1767c7;text-decoration:none;font-size:11px;white-space:nowrap}
+.reference-song-strip{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:14px}
+.reference-song-strip>button{display:flex;flex-direction:column;gap:6px;min-width:0;text-align:left;border:0;background:transparent;color:#171b29;padding:0;cursor:pointer}
+.reference-song-strip .music-cover{width:100%;aspect-ratio:1.6;object-fit:cover;border-radius:6px;background:#e9edf5}
+.reference-song-strip strong{font-size:11px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.reference-song-strip small{font-size:10px;color:#798195}
+.reference-other-songs .reference-song-strip+ p{font-size:12px;color:#7c8391}
+@media(max-width:1100px){.reference-site-header__top{grid-template-columns:185px minmax(230px,1fr) auto;gap:14px}.reference-brand__words strong{font-size:21px}.reference-quick-actions{gap:8px}.reference-quick-actions button{font-size:11px}.reference-site-nav{gap:18px}.reference-song-grid{grid-template-columns:minmax(0,1.15fr) minmax(0,1fr)}.reference-side-column{grid-column:1/-1;grid-template-columns:repeat(2,minmax(0,1fr))}.reference-side-column .reference-related-card>button{grid-template-columns:55px minmax(0,1fr) 14px}.reference-side-column .music-cover{width:55px;height:46px}}
+@media(max-width:760px){.reference-site-header{position:relative}.reference-site-header__top{grid-template-columns:1fr auto;gap:12px;padding:12px 15px}.reference-brand__words strong{font-size:21px}.reference-header-search{grid-column:1/-1;grid-row:2;height:42px}.reference-header-search>button{height:42px}.reference-quick-actions{grid-column:2;grid-row:1;gap:8px}.reference-quick-actions button:not(.reference-yellow){display:none}.reference-quick-actions .reference-yellow{padding:9px 11px}.reference-site-nav{overflow-x:auto;gap:20px;padding:0 15px;scrollbar-width:none}.reference-site-nav::-webkit-scrollbar{display:none}.reference-site-nav a,.reference-site-nav>button{padding:13px 0;font-size:11px}.reference-site-nav>button{margin-left:0}.reference-song-page{padding:12px 10px 0}.reference-breadcrumb{font-size:11px}.reference-song-hero{grid-template-columns:86px minmax(0,1fr);gap:12px;padding:10px}.reference-song-cover{width:86px;height:98px}.reference-song-meta h1{font-size:21px}.reference-song-artist{font-size:13px}.reference-song-album{font-size:10px;line-height:1.45}.reference-song-actions{gap:6px;margin-top:10px}.reference-song-actions button{min-height:32px;padding:0 9px;font-size:10px}.reference-song-actions .reference-save{margin-left:0}.reference-font-controls{margin-left:0}.reference-song-grid{grid-template-columns:1fr;gap:11px}.reference-lyrics-card{min-height:auto;padding:14px}.reference-lyrics-card h2{font-size:17px}.reference-video-column{grid-template-columns:1fr}.reference-side-column{grid-column:auto;grid-template-columns:1fr}.reference-related-card{padding:12px}.reference-other-songs{margin-top:11px;padding:13px}.reference-other-heading h2{font-size:14px}.reference-song-strip{grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.reference-video-details{grid-template-columns:1fr}.reference-video-details>a{grid-column:1;grid-row:auto;width:max-content}.portal--song-open .reference-song-page{padding-bottom:22px}}
+@media print{.reference-site-header,.reference-song-actions,.reference-video-column,.reference-side-column,.reference-other-songs,.reference-song-hero .reference-song-actions{display:none!important}.portal--song-open{background:#fff}.reference-song-grid{display:block}.reference-lyrics-card{border:0;box-shadow:none}.reference-lyrics-text{font-size:12pt!important}}
