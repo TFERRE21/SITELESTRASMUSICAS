@@ -109,7 +109,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (req.method === "GET" && url.pathname.startsWith("/api/lyrics/")) {
     const id = url.pathname.split("/").pop();
-    if (!/^\\d+$/.test(id)) return json(res, 400, { error: "Identificador de faixa inválido." });
+    if (!/^\d+$/.test(id)) return json(res, 400, { error: "Identificador de faixa inválido." });
     try {
       const track = await lrclib(`/api/get/${id}`);
       const lyrics = track.syncedLyrics || track.plainLyrics || "";
