@@ -16,3 +16,25 @@
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important;transition:none!important;animation:none!important}}
 
 .catalog-status{font-size:11px!important;color:#b8a4ff!important;margin-top:8px!important;line-height:1.6}.lyrics-overlay{position:fixed;inset:0;z-index:30;background:#08070bd9;display:grid;place-items:center;padding:18px;backdrop-filter:blur(8px)}.lyrics-panel{position:relative;width:min(680px,100%);max-height:min(82vh,800px);overflow:auto;background:#19171f;border:1px solid #514366;border-radius:16px;padding:30px;color:#f4effb;box-shadow:0 25px 80px #0009}.lyrics-panel h2{font-family:Manrope,sans-serif;font-size:27px;letter-spacing:-.8px;margin:13px 0 4px}.lyrics-artist{color:#b6a0ff;font-size:13px;margin:0 0 24px}.lyrics-content{white-space:pre-wrap;font-size:14px;line-height:1.9;color:#ded8e8}.lyrics-panel small{display:block;color:#91889f;margin-top:18px;line-height:1.6}.lyrics-close{position:absolute;right:15px;top:15px;width:34px;height:34px;display:grid;place-items:center;border:1px solid #484052;border-radius:9px;background:#25212e;color:#f4effb}
+
+/* Top 20 charts and country/genre navigation */
+.charts-section{max-width:1180px;margin:0 auto;padding:36px 38px 54px;border-top:1px solid var(--line)}
+.chart-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:22px 0}
+.chart-country-tabs{display:flex;gap:8px;flex-wrap:wrap}
+.chart-tab{border:1px solid var(--line);background:#19191f;color:#c7c2d0;border-radius:9px;padding:11px 14px;font-size:12px;font-weight:700}
+.chart-tab--active{background:#b7a0ff;color:#1a1425;border-color:#b7a0ff}
+.chart-genre-select{display:flex;align-items:center;gap:10px;color:var(--muted);font-size:12px}
+.chart-genre-select select{background:#19191f;color:#f5f2f8;border:1px solid var(--line);border-radius:8px;padding:10px 12px;max-width:220px}
+.chart-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.chart-row{display:flex;align-items:center;gap:13px;min-width:0;padding:11px;border:1px solid var(--line);background:rgba(255,255,255,.025);border-radius:12px}
+.chart-rank{width:24px;flex:0 0 24px;color:#b7a0ff;font-weight:800;font-size:13px;text-align:center}
+.chart-cover{width:54px;height:54px;flex:0 0 54px;object-fit:cover;border-radius:8px;background:#24212d}
+.chart-cover--empty{display:grid;place-items:center;color:#b7a0ff}
+.chart-track-info{display:flex;flex-direction:column;gap:4px;min-width:0;flex:1}
+.chart-track-info strong,.chart-track-info span,.chart-track-info small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-track-info strong{font-size:13px;color:#f5f2f8}
+.chart-track-info span{font-size:12px;color:#bdb7c7}
+.chart-track-info small{font-size:10px;color:#a995e6}
+.chart-open{display:grid;place-items:center;flex:0 0 32px;width:32px;height:32px;border:1px solid var(--line);border-radius:8px;color:#c8b8ff}
+.chart-disclaimer{color:#8e8999;font-size:11px;line-height:1.7;margin-top:18px}
+@media(max-width:700px){.charts-section{padding:30px 20px 42px}.chart-toolbar{align-items:stretch;flex-direction:column}.chart-list{grid-template-columns:1fr}.chart-genre-select{justify-content:space-between}.chart-genre-select select{flex:1;max-width:65%}.chart-tab{flex:1}.chart-country-tabs{display:flex}}
