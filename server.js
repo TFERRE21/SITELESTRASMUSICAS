@@ -19,7 +19,34 @@ let robotQueryIndex = 0;
 let robotNextAllowedAt = null;
 let robotConsecutiveErrors = 0;
 const ROBOT_INTERVAL_MS = 60_000;
-const ROBOT_QUERIES = ["gospel", "sertanejo", "MPB", "pop brasileiro", "rock brasileiro", "rap brasileiro", "funk brasileiro", "pagode", "samba", "forró", "reggae", "música eletrônica", "indie brasileiro", "jazz", "música clássica", "bossa nova", "country", "metal", "música latina", "louvor", "hinos", "Chitãozinho Xororó", "Marília Mendonça", "Legião Urbana", "Anitta", "Roberto Carlos", "Gilberto Gil", "Djavan", "Gusttavo Lima", "Adele"];
+const ROBOT_QUERIES = [
+  // Gêneros brasileiros
+  "gospel", "louvor", "hinos", "adoração", "sertanejo", "sertanejo universitário", "MPB", "pop brasileiro",
+  "rock brasileiro", "rap brasileiro", "hip hop brasileiro", "funk brasileiro", "pagode", "samba", "forró",
+  "piseiro", "arrocha", "brega", "axé", "reggae brasileiro", "música eletrônica brasileira", "indie brasileiro",
+  "jazz brasileiro", "música clássica brasileira", "bossa nova", "música infantil", "música regional brasileira",
+  // Gêneros internacionais
+  "pop", "rock", "alternative rock", "indie pop", "indie rock", "hip hop", "rap", "R&B", "soul", "funk music",
+  "country", "folk", "blues", "jazz", "classical", "metal", "heavy metal", "punk rock", "reggae", "ska",
+  "electronic", "EDM", "house", "techno", "trance", "disco", "dance", "latin", "reggaeton", "salsa",
+  "bachata", "merengue", "tango", "K-pop", "J-pop", "Afrobeats", "gospel music", "soundtrack", "musical theatre",
+  // Artistas brasileiros
+  "Chitãozinho Xororó", "Zezé Di Camargo Luciano", "Jorge Mateus", "Henrique Juliano", "Maiara Maraisa",
+  "Marília Mendonça", "Gusttavo Lima", "Luan Santana", "Ana Castela", "Zé Neto Cristiano", "João Gomes",
+  "Wesley Safadão", "Luísa Sonza", "Anitta", "Ludmilla", "Ivete Sangalo", "Claudia Leitte", "Roberto Carlos",
+  "Erasmo Carlos", "Gilberto Gil", "Caetano Veloso", "Chico Buarque", "Djavan", "Marisa Monte", "Gal Costa",
+  "Elis Regina", "Tim Maia", "Raul Seixas", "Legião Urbana", "Capital Inicial", "Charlie Brown Jr",
+  "Skank", "Titãs", "Paralamas do Sucesso", "Racionais MC's", "Emicida", "Criolo", "Seu Jorge", "Alcione",
+  "Zeca Pagodinho", "Beth Carvalho", "Alok", "Padre Marcelo Rossi", "Aline Barros", "Fernandinho",
+  "Gabriela Rocha", "Anderson Freire", "Diante do Trono", "Isadora Pompeo",
+  // Artistas internacionais
+  "The Beatles", "Taylor Swift", "The Weeknd", "Drake", "Billie Eilish", "Adele", "Ed Sheeran", "Dua Lipa",
+  "Beyonce", "Rihanna", "Lady Gaga", "Bruno Mars", "Michael Jackson", "Elvis Presley", "Queen", "Coldplay",
+  "Imagine Dragons", "Eminem", "Kendrick Lamar", "Kanye West", "SZA", "Ariana Grande", "Justin Bieber",
+  "Madonna", "Whitney Houston", "Mariah Carey", "ABBA", "Bob Marley", "Metallica", "Nirvana", "Linkin Park",
+  "Pink Floyd", "The Rolling Stones", "David Bowie", "Frank Sinatra", "Lana Del Rey", "Olivia Rodrigo",
+  "Sabrina Carpenter", "Chappell Roan", "Post Malone", "Shakira", "Bad Bunny", "BTS", "BLACKPINK"
+];
 
 const json = (res, status, body) => {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
@@ -38,7 +65,7 @@ async function saveCatalog(items) {
   await mkdir(dataDir, { recursive: true });
   const merged = new Map(cachedCatalog.map((item) => [String(item.id), item]));
   for (const item of items) merged.set(String(item.id), item);
-  cachedCatalog = [...merged.values()].slice(-5000);
+  cachedCatalog = [...merged.values()].slice(-50000);
   lastSearchAt = new Date().toISOString();
   await writeFile(catalogFile, JSON.stringify({ lastSearchAt, items: cachedCatalog }, null, 2), { mode: 0o600 });
 }
