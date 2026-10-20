@@ -73,15 +73,15 @@ export default function App() {
 
   const openLyrics = async (item) => {
     setLyricsLoading(true);
-    setLyrics({ title: item.title, artist: item.artist, text: "Consultando disponibilidade da letra..." });
+    setLyrics({ title: item.title, artist: item.artist, text: "Consultando disponibilidade da letra...", available: false, fallbackUrl: `https://www.letras.mus.br/?q=${encodeURIComponent([item.title, item.artist].filter(Boolean).join(" "))}` });
     try {
       const endpoint = String(item.id || "").startsWith("itunes-") || String(item.id || "").startsWith("mb-")
         ? `/api/lyrics/search?title=${encodeURIComponent(item.title)}&artist=${encodeURIComponent(item.artist)}`
         : `/api/lyrics/${encodeURIComponent(item.id)}`;
       const response = await fetch(endpoint);
       const data = await response.json();
-      setLyrics({ title: data.trackName || item.title, artist: data.artistName || item.artist, text: data.lyrics || data.error || "Letra indisponível na fonte consultada.", provider: data.provider });
-    } catch { setLyrics({ title: item.title, artist: item.artist, text: "Não foi possível consultar a fonte de letras neste momento." }); }
+      setLyrics({ title: data.trackName || item.title, artist: data.artistName || item.artist, text: data.lyrics || (response.status === 503 || response.status === 502 ? "A fonte de letras está temporariamente indisponível. Você pode procurar esta música em outra fonte." : data.error || "Letra indisponível na fonte consultada."), provider: data.provider, available: Boolean(data.lyrics), fallbackUrl: `https://www.letras.mus.br/?q=${encodeURIComponent([item.title, item.artist].filter(Boolean).join(" "))}` });
+    } catch { setLyrics({ title: item.title, artist: item.artist, text: "Não foi possível consultar a fonte de letras neste momento. Você pode procurar esta música em outra fonte.", available: false, fallbackUrl: `https://www.letras.mus.br/?q=${encodeURIComponent([item.title, item.artist].filter(Boolean).join(" "))}` }); }
     finally { setLyricsLoading(false); }
   };
 
@@ -120,6 +120,6 @@ export default function App() {
     </main>
     <footer className="portal-footer"><div className="portal-footer__main"><a className="portal-brand" href="#"><span className="portal-brand__mark"><AudioLines size={22}/></span><span>som<span>&</span>letra</span></a><p>Descobrindo sons, conectando histórias.</p><nav><a href="#destaques">Destaques</a><a href="#artistas">Artistas</a><a href="#generos">Gêneros</a><a href="#busca">Pesquisar</a></nav></div><div className="portal-footer__bottom"><span>© {new Date().getFullYear()} {institutional.brandName || "Som & Letra"}. Todos os direitos reservados.</span><span>Dados musicais fornecidos por fontes externas. Letras completas exibidas apenas quando disponíveis e autorizadas.</span></div></footer>
 
-    {lyrics && <div className="portal-modal-backdrop" role="dialog" aria-modal="true" aria-label={`Letra de ${lyrics.title}`}><section className="portal-lyrics-modal"><button className="portal-modal-close" onClick={()=>setLyrics(null)} aria-label="Fechar"><X/></button><span className="portal-kicker">SOM & LETRA · LETRAS</span><h2>{lyrics.title}</h2><p className="portal-lyrics-artist">{lyrics.artist}</p><div className="portal-lyrics-content">{lyricsLoading ? "Consultando fonte de letras..." : lyrics.text}</div><p className="portal-lyrics-footnote">A disponibilidade depende da fonte consultada e dos direitos de uso da letra.</p><button className="portal-modal-close-bottom" onClick={()=>setLyrics(null)}>Fechar</button></section></div>}
+    {lyrics && <div className="portal-modal-backdrop" role="dialog" aria-modal="true" aria-label={`Letra de ${lyrics.title}`}><section className="portal-lyrics-modal"><button className="portal-modal-close" onClick={()=>setLyrics(null)} aria-label="Fechar"><X/></button><span className="portal-kicker">SOM & LETRA · LETRAS</span><h2>{lyrics.title}</h2><p className="portal-lyrics-artist">{lyrics.artist}</p><div className="portal-lyrics-content">{lyricsLoading ? "Consultando fonte de letras..." : lyrics.text}</div><p className="portal-lyrics-footnote">A disponibilidade depende da fonte consultada e dos direitos de uso da letra.</p>{!lyricsLoading && !lyrics.available && lyrics.fallbackUrl && <a className="portal-lyrics-fallback" href={lyrics.fallbackUrl} target="_blank" rel="noreferrer"><ExternalLink size={16}/> Buscar esta letra em Letras.mus.br</a>}<button className="portal-modal-close-bottom" onClick={()=>setLyrics(null)}>Fechar</button></section></div>}
   </div>;
 }
