@@ -132,61 +132,86 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/music-search") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
     if (q.length < 2) return json(res, 400, { error: "Digite pelo menos duas letras para pesquisar." });
+    const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1);
+    const limit = 50;
+    const offset = (page - 1) * limit;
+    const normalize = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+    const query = normalize(q);
+    const tokens = query.split(" ").filter((token) => token.length > 1);
+    const relevant = (item) => {
+      const fields = normalize([item.title, item.artist, item.album].filter(Boolean).join(" "));
+      return fields.includes(query) || (tokens.length > 0 && tokens.every((token) => fields.includes(token)));
+    };
+    const mapApple = (track) => ({
+      id: `itunes-${track.trackId}`,
+      title: track.trackName || "Faixa sem título",
+      artist: track.artistName || "Artista desconhecido",
+      album: track.collectionName || "",
+      genre: track.primaryGenreName || "",
+      releaseDate: track.releaseDate || "",
+      provider: "iTunes",
+      artworkUrl: (track.artworkUrl100 || "").replace("100x100bb", "300x300bb"),
+      providerUrl: track.trackViewUrl || "",
+      previewUrl: track.previewUrl || "",
+      lyricsAvailable: false,
+      duration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : null
+    });
+    const mapMusicBrainz = (recording) => ({
+      id: `mb-${recording.id}`,
+      title: recording.title || "Faixa sem título",
+      artist: (recording["artist-credit"] || []).map((credit) => typeof credit === "string" ? credit : credit.name || credit.artist?.name || "").join(""),
+      album: (recording.releases || [])[0]?.title || "",
+      genre: (recording.tags || []).slice(0, 2).map((tag) => tag.name).join(", "),
+      releaseDate: recording["first-release-date"] || "",
+      provider: "MusicBrainz",
+      artworkUrl: "",
+      providerUrl: `https://musicbrainz.org/recording/${recording.id}`,
+      previewUrl: "",
+      lyricsAvailable: false,
+      duration: recording.length ? Math.round(recording.length / 1000) : null
+    });
     try {
+      let items = [];
+      let total = 0;
+      let source = "Apple/iTunes";
+      // Apple search results are filtered so unrelated tracks are never shown as matches.
       const lookup = new URL("https://itunes.apple.com/search");
       lookup.searchParams.set("term", q);
       lookup.searchParams.set("entity", "song");
-      const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1);
-      lookup.searchParams.set("limit", "50");
-      lookup.searchParams.set("offset", String((page - 1) * 50));
+      lookup.searchParams.set("limit", String(limit));
+      lookup.searchParams.set("offset", String(offset));
       lookup.searchParams.set("country", "BR");
       const response = await fetch(lookup, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
-      if (!response.ok) throw new Error(`Pesquisa musical respondeu HTTP ${response.status}.`);
-      const payload = await response.json();
-      let items = (payload.results || []).map((track) => ({
-        id: `itunes-${track.trackId}`,
-        title: track.trackName || "Faixa sem título",
-        artist: track.artistName || "Artista desconhecido",
-        album: track.collectionName || "",
-        genre: track.primaryGenreName || "",
-        releaseDate: track.releaseDate || "",
-        provider: "iTunes",
-        artworkUrl: (track.artworkUrl100 || "").replace("100x100bb", "300x300bb"),
-        providerUrl: track.trackViewUrl || "",
-        previewUrl: track.previewUrl || "",
-        lyricsAvailable: false,
-        duration: track.trackTimeMillis ? Math.round(track.trackTimeMillis / 1000) : null
-      }));
-      // If Apple's catalog returns no matching tracks, search MusicBrainz for recordings.
-      let source = "Apple/iTunes";
-      if (!items.length && page === 1) {
-        const mbUrl = new URL("https://musicbrainz.org/ws/2/recording");
-        mbUrl.searchParams.set("query", q);
-        mbUrl.searchParams.set("fmt", "json");
-        mbUrl.searchParams.set("limit", "50");
-        mbUrl.searchParams.set("offset", "0");
-        const mbResponse = await fetch(mbUrl, { headers: { "User-Agent": "SomELetra/1.0 (music catalog search)", "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
-        if (mbResponse.ok) {
-          const mb = await mbResponse.json();
-          items = (mb.recordings || []).map((recording) => ({
-            id: `mb-${recording.id}`,
-            title: recording.title || "Faixa sem título",
-            artist: (recording["artist-credit"] || []).map((credit) => typeof credit === "string" ? credit : credit.name || credit.artist?.name || "").join(""),
-            album: (recording.releases || [])[0]?.title || "",
-            genre: (recording.tags || []).slice(0, 2).map((tag) => tag.name).join(", "),
-            releaseDate: recording["first-release-date"] || "",
-            provider: "MusicBrainz",
-            artworkUrl: "",
-            providerUrl: `https://musicbrainz.org/recording/${recording.id}`,
-            previewUrl: "",
-            lyricsAvailable: false,
-            duration: recording.length ? Math.round(recording.length / 1000) : null
-          }));
-          source = "MusicBrainz";
-        }
+      if (response.ok) {
+        const payload = await response.json();
+        const appleItems = (payload.results || []).map(mapApple).filter(relevant);
+        items = appleItems;
+        total = appleItems.length;
       }
-      const total = payload.resultCount || items.length;
-      return json(res, 200, { items, total, page, limit: 50, hasMore: items.length === 50, source: items.length && items[0].provider === "MusicBrainz" ? "MusicBrainz" : source, query: q });
+      // If Apple has no relevant matches, try MusicBrainz title/recording search, then artist-specific search.
+      if (!items.length) {
+        source = "MusicBrainz";
+        let mb = null;
+        for (const mbQuery of [q, `artist:"${q.replace(/["\\\\]/g, " ")}"`]) {
+          const mbUrl = new URL("https://musicbrainz.org/ws/2/recording");
+          mbUrl.searchParams.set("query", mbQuery);
+          mbUrl.searchParams.set("fmt", "json");
+          mbUrl.searchParams.set("limit", String(limit));
+          mbUrl.searchParams.set("offset", String(offset));
+          const mbResponse = await fetch(mbUrl, { headers: { "User-Agent": "SomELetra/1.0 (https://github.com/TFERRE21/SITELESTRASMUSICAS)", "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
+          if (!mbResponse.ok) continue;
+          const payload = await mbResponse.json();
+          const matches = (payload.recordings || []).map(mapMusicBrainz).filter(relevant);
+          if (matches.length) {
+            items = matches;
+            total = Number(payload.count) || matches.length;
+            mb = payload;
+            break;
+          }
+        }
+        if (!items.length) total = 0;
+      }
+      return json(res, 200, { items, total, page, limit, hasMore: offset + items.length < total, source, query: q });
     } catch (error) {
       return json(res, 502, { error: error.message || "Não foi possível pesquisar o catálogo musical.", items: [] });
     }
