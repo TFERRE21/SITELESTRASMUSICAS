@@ -29,7 +29,14 @@ Abra o endereço local informado pelo Vite.
 
 Copie `.env.example` para `.env` quando necessário. Não envie arquivos `.env` reais, tokens ou credenciais para o GitHub.
 
-O cadastro institucional centraliza o CNPJ fornecido pelo proprietário. Razão social, nome fantasia, e-mail, endereço e contato de direitos autorais permanecem pendentes de confirmação. Não interprete a inclusão do CNPJ como validação cadastral.\n\n### Contas e suporte\n\n- Configure `DATA_DIR` em um volume persistente da hospedagem; o servidor grava ali contas, sessões, favoritos e chamados em arquivos JSON. Se o diretório for efêmero, os dados podem ser perdidos em uma nova implantação.\n- Defina `ADMIN_SUPPORT_TOKEN` como segredo longo e aleatório no painel da hospedagem para proteger os endpoints administrativos de suporte. Não o publique nem use prefixo `VITE_`.\n- Cadastro e login estão disponíveis via `/api/auth/register` e `/api/auth/login`; senhas são derivadas com `scrypt` e não são armazenadas em texto puro.\n- A recuperação de senha por e-mail, edição completa do perfil, playlists e painel visual administrativo ainda precisam de implementação. Configure serviço de e-mail antes de oferecer recuperação de senha.
+O cadastro institucional centraliza o CNPJ fornecido pelo proprietário. Razão social, nome fantasia, e-mail, endereço e contato de direitos autorais permanecem pendentes de confirmação. Não interprete a inclusão do CNPJ como validação cadastral.
+
+### Contas e suporte
+
+- Configure `DATA_DIR` em um volume persistente da hospedagem; o servidor grava ali contas, sessões, favoritos e chamados em arquivos JSON. Se o diretório for efêmero, os dados podem ser perdidos em uma nova implantação.
+- Defina `ADMIN_SUPPORT_TOKEN` como segredo longo e aleatório no painel da hospedagem para proteger os endpoints administrativos de suporte. Não o publique nem use prefixo `VITE_`.
+- Cadastro e login estão disponíveis via `/api/auth/register` e `/api/auth/login`; senhas são derivadas com `scrypt` e não são armazenadas em texto puro.
+- A recuperação de senha por e-mail, edição completa do perfil, playlists e painel visual administrativo ainda precisam de implementação. Configure serviço de e-mail antes de oferecer recuperação de senha.
 
 ## Direitos autorais
 
