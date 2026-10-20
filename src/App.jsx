@@ -49,21 +49,21 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    fetch("/api/catalog")
-      .then(async (response) => {
+    const refreshCatalog = async () => {
+      try {
+        const response = await fetch("/api/catalog?page=1&limit=100");
         const data = await response.json();
         if (!response.ok) throw new Error(data.error || "Catálogo indisponível.");
-        return data;
-      })
-      .then((data) => {
         if (!active) return;
         setCatalogItems(Array.isArray(data.items) ? data.items : []);
         setCatalogMessage(data.items?.length
-          ? `Catálogo LRCLIB disponível${data.lastSearchAt ? ` (última consulta ${new Date(data.lastSearchAt).toLocaleString("pt-BR")})` : ""}.`
-          : "Pesquise uma música ou artista para consultar o catálogo gratuito LRCLIB; não é necessária chave de API.");
-      })
-      .catch(() => { if (active) setCatalogMessage("Catálogo externo indisponível; exibindo exemplos demonstrativos."); });
-    return () => { active = false; };
+          ? `Robô do catálogo ativo: ${data.total ?? data.items.length} músicas armazenadas. Atualização automática a cada minuto.`
+          : "Robô do catálogo iniciado. As primeiras músicas serão adicionadas automaticamente.");
+      } catch { if (active) setCatalogMessage("Catálogo temporariamente indisponível; o robô tentará novamente."); }
+    };
+    refreshCatalog();
+    const interval = setInterval(refreshCatalog, 60_000);
+    return () => { active = false; clearInterval(interval); };
   }, []);
 
   useEffect(() => {
