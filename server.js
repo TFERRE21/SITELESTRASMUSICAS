@@ -2,12 +2,16 @@ import http from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import path from "node:path";
+import { randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { fileURLToPath } from "node:url";
 
 const root = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(root, "dist");
 const dataDir = process.env.DATA_DIR || path.join(root, "data");
 const catalogFile = path.join(dataDir, "catalog.json");
+const usersFile = path.join(dataDir, "users.json");
+const sessionsFile = path.join(dataDir, "sessions.json");
+const ticketsFile = path.join(dataDir, "support-tickets.json");
 const PORT = Number(process.env.PORT || 3000);
 const USER_AGENT = "SomELetra/0.2 (https://github.com/TFERRE21/SITELESTRASMUSICAS)";
 let cachedCatalog = [];
@@ -52,6 +56,46 @@ const json = (res, status, body) => {
   res.writeHead(status, { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" });
   res.end(JSON.stringify(body));
 };
+
+
+async function readJsonFile(file, fallback) {
+  try { return JSON.parse(await readFile(file, "utf8")); } catch { return fallback; }
+}
+async function writeJsonFile(file, value) {
+  await mkdir(dataDir, { recursive: true });
+  await writeFile(file, JSON.stringify(value, null, 2), { mode: 0o600 });
+}
+function readBody(req) {
+  return new Promise((resolve, reject) => {
+    let raw = "";
+    req.on("data", (chunk) => { raw += chunk; if (raw.length > 100_000) { reject(new Error("Solicitação muito grande.")); req.destroy(); } });
+    req.on("end", () => { try { resolve(raw ? JSON.parse(raw) : {}); } catch { reject(new Error("JSON inválido.")); } });
+    req.on("error", reject);
+  });
+}
+function hashPassword(password, salt = randomBytes(16).toString("hex")) {
+  return { salt, hash: scryptSync(password, salt, 64).toString("hex") };
+}
+function passwordMatches(password, user) {
+  const actual = scryptSync(password, user.salt, 64);
+  const expected = Buffer.from(user.passwordHash, "hex");
+  return actual.length === expected.length && timingSafeEqual(actual, expected);
+}
+async function currentUser(req) {
+  const token = String(req.headers.authorization || "").replace(/^Bearer\\s+/i, "");
+  if (!token) return null;
+  const sessions = await readJsonFile(sessionsFile, {});
+  const session = sessions[token];
+  if (!session || session.expiresAt < Date.now()) {
+    if (session) { delete sessions[token]; await writeJsonFile(sessionsFile, sessions); }
+    return null;
+  }
+  const users = await readJsonFile(usersFile, []);
+  return users.find((user) => user.id === session.userId) || null;
+}
+function publicUser(user) {
+  return { id: user.id, name: user.name, email: user.email, favorites: user.favorites || [], createdAt: user.createdAt };
+}
 
 async function readCatalog() {
   try {
@@ -129,6 +173,110 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
+
+  if (url.pathname === "/api/auth/register" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const name = String(body.name || "").trim().slice(0, 80);
+      const email = String(body.email || "").trim().toLowerCase().slice(0, 180);
+      const password = String(body.password || "");
+      if (name.length < 2 || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email) || password.length < 10) return json(res, 400, { error: "Informe nome, e-mail válido e senha com pelo menos 10 caracteres." });
+      const users = await readJsonFile(usersFile, []);
+      if (users.some((user) => user.email === email)) return json(res, 409, { error: "Já existe uma conta com este e-mail." });
+      const credentials = hashPassword(password);
+      const user = { id: randomBytes(16).toString("hex"), name, email, ...credentials, favorites: [], createdAt: new Date().toISOString() };
+      users.push(user); await writeJsonFile(usersFile, users);
+      const token = randomBytes(32).toString("hex");
+      const sessions = await readJsonFile(sessionsFile, {});
+      sessions[token] = { userId: user.id, expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 14 };
+      await writeJsonFile(sessionsFile, sessions);
+      return json(res, 201, { token, user: publicUser(user) });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível criar a conta." }); }
+  }
+  if (url.pathname === "/api/auth/login" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const email = String(body.email || "").trim().toLowerCase();
+      const users = await readJsonFile(usersFile, []);
+      const user = users.find((item) => item.email === email);
+      if (!user || !passwordMatches(String(body.password || ""), user)) return json(res, 401, { error: "E-mail ou senha incorretos." });
+      const token = randomBytes(32).toString("hex");
+      const sessions = await readJsonFile(sessionsFile, {});
+      sessions[token] = { userId: user.id, expiresAt: Date.now() + 1000 * 60 * 60 * 24 * 14 };
+      await writeJsonFile(sessionsFile, sessions);
+      return json(res, 200, { token, user: publicUser(user) });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível entrar." }); }
+  }
+  if (url.pathname === "/api/auth/me" && req.method === "GET") {
+    const user = await currentUser(req);
+    return user ? json(res, 200, { user: publicUser(user) }) : json(res, 401, { error: "Faça login para continuar." });
+  }
+  if (url.pathname === "/api/auth/logout" && req.method === "POST") {
+    const token = String(req.headers.authorization || "").replace(/^Bearer\\s+/i, "");
+    const sessions = await readJsonFile(sessionsFile, {});
+    delete sessions[token]; await writeJsonFile(sessionsFile, sessions);
+    return json(res, 200, { ok: true });
+  }
+  if (url.pathname === "/api/account/favorites" && req.method === "PUT") {
+    const user = await currentUser(req);
+    if (!user) return json(res, 401, { error: "Faça login para salvar seus favoritos." });
+    try {
+      const body = await readBody(req);
+      const favorites = Array.isArray(body.favorites) ? body.favorites.slice(0, 500).map((item) => ({
+        id: String(item.id || "").slice(0, 160), title: String(item.title || "").slice(0, 200),
+        artist: String(item.artist || "").slice(0, 200), album: String(item.album || "").slice(0, 200),
+        artworkUrl: /^https:\\/\\//i.test(item.artworkUrl || "") ? String(item.artworkUrl).slice(0, 1000) : ""
+      })).filter((item) => item.id && item.title) : [];
+      const users = await readJsonFile(usersFile, []);
+      const index = users.findIndex((item) => item.id === user.id);
+      users[index].favorites = favorites; await writeJsonFile(usersFile, users);
+      return json(res, 200, { favorites });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível salvar favoritos." }); }
+  }
+  if (url.pathname === "/api/support/tickets" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const subject = String(body.subject || "").trim().slice(0, 100);
+      const description = String(body.description || "").trim().slice(0, 5000);
+      const email = String(body.email || "").trim().toLowerCase().slice(0, 180);
+      const user = await currentUser(req);
+      if (!subject || description.length < 10 || (!user && !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))) return json(res, 400, { error: "Informe o assunto, descreva o problema com pelo menos 10 caracteres e forneça um e-mail válido se não estiver conectado." });
+      const tickets = await readJsonFile(ticketsFile, []);
+      const ticket = { protocol: "SL-" + randomBytes(4).toString("hex").toUpperCase(), subject, description, email: user?.email || email, userId: user?.id || null, status: "Aberto", messages: [], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      tickets.unshift(ticket); await writeJsonFile(ticketsFile, tickets);
+      return json(res, 201, { ticket: { protocol: ticket.protocol, subject: ticket.subject, status: ticket.status, createdAt: ticket.createdAt } });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível abrir o chamado." }); }
+  }
+  if (url.pathname === "/api/support/tickets" && req.method === "GET") {
+    const user = await currentUser(req);
+    const protocol = (url.searchParams.get("protocol") || "").trim().toUpperCase();
+    const email = (url.searchParams.get("email") || "").trim().toLowerCase();
+    if (!user && (!protocol || !email)) return json(res, 400, { error: "Informe o protocolo e o e-mail de contato para consultar um chamado." });
+    const tickets = await readJsonFile(ticketsFile, []);
+    const found = tickets.filter((ticket) => user ? ticket.userId === user.id : ticket.protocol === protocol && ticket.email === email);
+    return json(res, 200, { tickets: found.map(({ protocol, subject, status, messages, createdAt, updatedAt }) => ({ protocol, subject, status, messages, createdAt, updatedAt })) });
+  }
+  if (url.pathname === "/api/admin/support/tickets" && req.method === "GET") {
+    if (!process.env.ADMIN_SUPPORT_TOKEN || req.headers["x-admin-token"] !== process.env.ADMIN_SUPPORT_TOKEN) return json(res, 403, { error: "Acesso administrativo não autorizado." });
+    const tickets = await readJsonFile(ticketsFile, []);
+    return json(res, 200, { tickets });
+  }
+  if (url.pathname.startsWith("/api/admin/support/tickets/") && req.method === "PATCH") {
+    if (!process.env.ADMIN_SUPPORT_TOKEN || req.headers["x-admin-token"] !== process.env.ADMIN_SUPPORT_TOKEN) return json(res, 403, { error: "Acesso administrativo não autorizado." });
+    try {
+      const protocol = url.pathname.split("/").pop().toUpperCase();
+      const body = await readBody(req);
+      const allowed = ["Aberto", "Em atendimento", "Aguardando resposta", "Resolvido"];
+      const tickets = await readJsonFile(ticketsFile, []);
+      const ticket = tickets.find((item) => item.protocol === protocol);
+      if (!ticket) return json(res, 404, { error: "Chamado não encontrado." });
+      if (allowed.includes(body.status)) ticket.status = body.status;
+      if (String(body.message || "").trim()) ticket.messages.push({ from: "suporte", text: String(body.message).trim().slice(0, 3000), at: new Date().toISOString() });
+      ticket.updatedAt = new Date().toISOString(); await writeJsonFile(ticketsFile, tickets);
+      return json(res, 200, { ticket });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível atualizar o chamado." }); }
+  }
+
   if (req.method === "GET" && url.pathname === "/api/music-search") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
     if (q.length < 2) return json(res, 400, { error: "Digite pelo menos duas letras para pesquisar." });
