@@ -435,38 +435,36 @@ const server = http.createServer(async (req, res) => {
       const rows = [];
       for (const rowMatch of decoded.matchAll(rowRegex)) {
         const row = rowMatch[1];
-        const hrefMatch = row.match(/<a\b[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i);
-        if (!hrefMatch) continue;
-        const href = hrefMatch[1];
-        if (!/\/(songs|sounds)\//i.test(href)) continue;
-        const title = strip(hrefMatch[2]);
-        if (!title || title.length > 180 || rows.some((item) => item.title === title)) continue;
         const cellRegex = /<td\b[^>]*>([\s\S]*?)<\/td>/gi;
-        const cells = [...row.matchAll(cellRegex)].map((cell) => strip(cell[1]));
-        const rankCandidate = Number.parseInt(cells[0] || "", 10);
-        if (Number.isFinite(rankCandidate) && (rankCandidate < 1 || rankCandidate > 500)) continue;
-        const artist = cells.slice(1).find((value) => value && value !== title && !/^[-–—]$/.test(value)) || "Ver artistas na fonte";
-        const img = row.match(/<img\b[^>]*src=["']([^"']+)["']/i);
+        const cells = [...row.matchAll(cellRegex)].map((cell) => ({ html: cell[1], text: strip(cell[1]) }));
+        if (!cells.length) continue;
+        const rankCandidate = Number.parseInt(cells[0].text, 10);
+        if (!Number.isFinite(rankCandidate) || rankCandidate < 1 || rankCandidate > 500) continue;
+        const titleCell = cells.find((cell) => /href=["'][^"']*\/(songs|sounds)\//i.test(cell.html));
+        if (!titleCell) continue;
+        const hrefMatch = titleCell.html.match(/href=["']([^"']+)["']/i);
+        const titleLinkText = titleCell.html.match(/<a\b[^>]*href=["'][^"']*\/(songs|sounds)\/[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+        if (!hrefMatch || !titleLinkText) continue;
+        const title = strip(titleLinkText[2]);
+        if (!title || title.length > 180 || rows.some((item) => item.rank === rankCandidate || item.title === title)) continue;
+        const artist = cells.slice(1).filter((cell) => cell.text && cell.text !== title).map((cell) => cell.text).find((text) => !/^[-–—]$/.test(text)) || "Ver artistas na fonte";
+        const imageMatch = titleCell.html.match(/<img\b[^>]*src=["']([^"']+)["']/i);
         rows.push({
-          id: `ytchart-${countrySlug}-${rows.length+1}`,
-          rank: Number.isFinite(rankCandidate) && rankCandidate > 0 ? rankCandidate : rows.length+1,
-          title, artist, album: "", genre: "YouTube Top Songs",
-          genres: [{ name: "YouTube Top Songs" }],
-          artworkUrl: img?.[1] || "",
-          url: href.startsWith("http") ? href : `https://chartex.com${href}`,
-          country: isGlobal ? "Global" : "Brasil",
-          source: "YouTube Top Songs via ChartEx",
+          id: `ytchart-${countrySlug}-${rankCandidate}`, rank: rankCandidate, title, artist,
+          album: "", genre: "YouTube Top Songs", genres: [{ name: "YouTube Top Songs" }],
+          artworkUrl: imageMatch?.[1] || "",
+          url: hrefMatch[1].startsWith("http") ? hrefMatch[1] : `https://chartex.com${hrefMatch[1]}`,
+          country: isGlobal ? "Global" : "Brasil", source: "YouTube Top Songs via ChartEx",
           updatedAt: new Date().toISOString()
         });
-        if (rows.length >= 10) break;
       }
-      if (!rows.length) throw new Error("A fonte não apresentou músicas em formato reconhecido. O site não mostrará dados de outro serviço como se fossem do YouTube.");
+      rows.sort((a, b) => a.rank - b.rank);
+      const items = rows.slice(0, 10);
+      if (!items.length) throw new Error("A fonte não apresentou linhas de ranking reconhecíveis. Nenhuma lista alternativa será rotulada como ranking do YouTube.");
       return json(res, 200, {
-        country: countrySlug, items: rows, total: rows.length,
-        updatedAt: new Date().toISOString(),
-        source: "YouTube Top Songs via ChartEx",
-        sourceUrl: chartUrl,
-        chartTitle,
+        country: countrySlug, items, total: items.length,
+        updatedAt: new Date().toISOString(), source: "YouTube Top Songs via ChartEx",
+        sourceUrl: chartUrl, chartTitle,
         note: "Ranking semanal do YouTube apresentado por um serviço terceiro."
       });
     } catch (error) {
