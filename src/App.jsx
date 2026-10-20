@@ -124,7 +124,7 @@ export default function App() {
     // Gêneros são termos de descoberta no LRCLIB, não metadados garantidos.
     const isGenreDiscovery = categories.some((genre) => genre.toLocaleLowerCase("pt-BR") === normalizedQuery);
     const searchable = `${track.title} ${track.artist} ${track.genre}`.toLocaleLowerCase("pt-BR");
-    return matchesCategory && (!normalizedQuery || searchable.includes(normalizedQuery) || (isGenreDiscovery && normalizedQuery === "todas"));
+    return matchesCategory && (!normalizedQuery || isGenreDiscovery || searchable.includes(normalizedQuery));
   }), [category, query, catalogItems]);
 
   const toggleSaved = (title) => {
