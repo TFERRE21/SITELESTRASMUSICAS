@@ -95,25 +95,6 @@ export default function App() {
     return () => { active = false; };
   }, [chartCountry]);
 
-  useEffect(() => {
-    const term = query.trim();
-    if (term.length < 2) return undefined;
-    let active = true;
-    const timeout = setTimeout(async () => {
-      try {
-        const response = await fetch(`/api/music-search?q=${encodeURIComponent(term)}&page=1`);
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Falha na pesquisa.");
-        if (active && Array.isArray(data.items)) {
-          setCatalogItems(data.items);
-          setCatalogMessage(data.items.length ? `${data.items.length} músicas encontradas em ${data.source || "fontes musicais"}.` : "Nenhuma música encontrada. Tente outro nome ou artista.");
-        }
-      } catch (error) {
-        if (active) setCatalogMessage(`${error.message || "Não foi possível pesquisar no catálogo externo."} Mostrando apenas músicas previamente armazenadas, se houver.`);
-      }
-    }, 350);
-    return () => { active = false; clearTimeout(timeout); };
-  }, [query]);
 
   useEffect(() => {
     let active = true;
