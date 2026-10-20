@@ -225,9 +225,9 @@ export default function App() {
             <div className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite música ou artista..." aria-label="Buscar música ou artista" /><button className="search-submit" type="submit" disabled={query.trim().length < 2}><Search size={16} /><span>Pesquisar música</span></button></div>
             <a className="text-link letras-search-link" href={query.trim().length >= 2 ? `https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}` : "https://www.letras.mus.br/"} target="_blank" rel="noreferrer">Buscar no Letras.mus.br <ArrowRight size={15} /></a>
             <div className="category-list" id="generos" aria-label="Filtrar por gênero">
-              {categories.map((item) => <button key={item} className={category === item ? "category category--active" : "category"} onClick={() => { setCategory("Todas"); setQuery(item === "Todas" ? "" : item); }}>{item}</button>)}
+              {categories.map((item) => <button type="button" key={item} className={category === item ? "category category--active" : "category"} onClick={() => { setCategory("Todas"); setQuery(item === "Todas" ? "" : item); }}>{item}</button>)}
             </div>
-          </div>
+          </form>
           {notice && <div className="inline-notice" role="status"><Check size={15} />{notice}<button onClick={() => setNotice("")} aria-label="Dispensar aviso"><X size={14} /></button></div>}
           {filteredTracks.length ? <div className="track-grid">{filteredTracks.map((track) => {
             const isSaved = saved.includes(track.title);
