@@ -418,31 +418,63 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/charts") {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
     const isGlobal = ["international", "global", "us"].includes(country);
-    const storefront = isGlobal ? "us" : "br";
+    const countrySlug = isGlobal ? "worldwide" : "brazil";
+    // CHARTEX republishes YouTube's official weekly Top Songs charts with song
+    // metadata. The label below identifies it as a third-party presentation of
+    // YouTube's charts, not a native YouTube API endpoint.
     try {
-      const response = await fetch(`https://rss.applemarketingtools.com/api/v2/${storefront}/music/most-played/10/songs.json`, {
-        headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
-        signal: AbortSignal.timeout(12000)
+      const chartUrl = `https://chartex.com/charts/youtube/weekly/${countrySlug}`;
+      const response = await fetch(chartUrl, {
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; SomELetra/1.0)", "Accept": "text/html" },
+        signal: AbortSignal.timeout(15000)
       });
-      if (!response.ok) throw new Error(`O ranking musical respondeu HTTP ${response.status}.`);
-      const payload = await response.json();
-      const items = (payload.feed?.results || []).slice(0, 10).map((track, index) => ({
-        id: track.id || track.url, rank: index + 1,
-        title: track.name || "Faixa sem título", artist: track.artistName || "Artista desconhecido",
-        album: track.albumName || "", genre: track.genres?.[0]?.name || "Outros",
-        genres: (track.genres || []).map((genre) => genre.name),
-        artworkUrl: track.artworkUrl100 || "", url: track.url || "",
-        country: isGlobal ? "Global" : "Brasil", source: "Apple Music Top Songs",
-        updatedAt: payload.feed?.updated || new Date().toISOString()
-      }));
+      if (!response.ok) throw new Error(`Chart page respondeu HTTP ${response.status}.`);
+      const html = await response.text();
+      const titleText = html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1] || "";
+      const pageTitle = titleText.replace(/<[^>]+>/g, "").replace(/&amp;/g, "&").trim();
+      const rows = [];
+      const linkPattern = /<a\\b[^>]*href=["']([^"']+)["'][^>]*>([\\s\\S]*?)<\\/a>/gi;
+      const links = [...html.matchAll(linkPattern)];
+      for (let i = 0; i < links.length; i++) {
+        const href = links[i][1];
+        const inner = links[i][2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").replace(/\\s+/g, " ").trim();
+        if (!/\\/(songs|sounds)\\//i.test(href) || !inner || inner.length > 180) continue;
+        const title = inner;
+        const prev = links.slice(i + 1, i + 5).map((x) => x[2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/\\s+/g, " ").trim()).find((x) => x && x.length < 160 && !/^\\d{1,2}\\s/ .test(x));
+        const imageMatch = html.slice(Math.max(0, links[i].index - 1500), links[i].index).match(/<img[^>]+src=["']([^"']+)["']/i);
+        const artist = (prev || "").replace(/\\d{1,2}\\s+[A-Z][a-z]{2}\\s+\\d{4}.*$/, "").trim() || "Ver artistas na fonte";
+        if (rows.some((r) => r.title === title)) continue;
+        rows.push({
+          id: `ytchart-${countrySlug}-${rows.length+1}`,
+          rank: rows.length+1,
+          title,
+          artist,
+          album: "",
+          genre: "YouTube Top Songs",
+          genres: [{ name: "YouTube Top Songs" }],
+          artworkUrl: imageMatch?.[1] || "",
+          url: href.startsWith("http") ? href : `https://chartex.com${href}`,
+          country: isGlobal ? "Global" : "Brasil",
+          source: "YouTube Top Songs via ChartEx",
+          updatedAt: new Date().toISOString()
+        });
+        if (rows.length >= 10) break;
+      }
+      if (!rows.length) {
+        const error = new Error("Não foi possível extrair os dados do ranking oficial nesta resposta. Nenhuma lista alternativa será apresentada como se fosse o ranking do YouTube.");
+        error.status = 502;
+        throw error;
+      }
       return json(res, 200, {
-        country: storefront, items, total: items.length,
-        updatedAt: payload.feed?.updated || new Date().toISOString(),
-        source: "Apple Music Top Songs",
-        note: "Este ranking é do Apple Music, não do YouTube. Para exibir o ranking oficial do YouTube, é necessária uma fonte oficial de charts acessível."
+        country: countrySlug, items: rows, total: rows.length,
+        updatedAt: new Date().toISOString(),
+        source: "YouTube Top Songs via ChartEx",
+        sourceUrl: chartUrl,
+        chartTitle: pageTitle,
+        note: "Ranking semanal de músicas do YouTube apresentado por um serviço terceiro."
       });
     } catch (error) {
-      return json(res, 502, { error: error.message || "Não foi possível carregar o ranking musical.", items: [], source: "ranking musical" });
+      return json(res, 502, { error: error.message || "Não foi possível carregar o ranking do YouTube.", items: [], source: "YouTube Top Songs" });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
