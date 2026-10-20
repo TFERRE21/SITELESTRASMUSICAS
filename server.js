@@ -102,6 +102,35 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/health") {
     return json(res, 200, { ok: true, provider: "LRCLIB", providerConfigured: true, apiKeyRequired: false, catalogItems: cachedCatalog.length, lastSearchAt });
   }
+  if (req.method === "GET" && url.pathname === "/api/charts") {
+    const country = (url.searchParams.get("country") || "br").toLowerCase();
+    const storefront = country === "international" || country === "us" ? "us" : "br";
+    try {
+      const response = await fetch(`https://rss.applemarketingtools.com/api/v2/${storefront}/music/most-played/20/songs.json`, {
+        headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+        signal: AbortSignal.timeout(12000)
+      });
+      if (!response.ok) throw new Error(`Apple Music charts respondeu HTTP ${response.status}.`);
+      const payload = await response.json();
+      const items = (payload.feed?.results || []).slice(0, 20).map((track, index) => ({
+        id: track.id || track.url,
+        rank: index + 1,
+        title: track.name || "Faixa sem título",
+        artist: track.artistName || "Artista desconhecido",
+        album: track.albumName || "",
+        genre: track.genres?.[0]?.name || "Outros",
+        genres: (track.genres || []).map((genre) => genre.name),
+        artworkUrl: track.artworkUrl100 || "",
+        url: track.url || "",
+        country: storefront === "br" ? "Nacional" : "Internacional",
+        source: "Apple Music Top Songs",
+        updatedAt: payload.feed?.updated || new Date().toISOString()
+      }));
+      return json(res, 200, { country: storefront, items, total: items.length, updatedAt: payload.feed?.updated || new Date().toISOString(), source: "Apple Music Top Songs" });
+    } catch (error) {
+      return json(res, 502, { error: error.message || "Não foi possível carregar o ranking musical.", items: [], source: "Apple Music Top Songs" });
+    }
+  }
   if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
     if (!q) return json(res, 400, { error: "Informe o nome da música ou artista no parâmetro q." });
