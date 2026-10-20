@@ -440,7 +440,7 @@ const server = http.createServer(async (req, res) => {
         const inner = links[i][2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ").replace(/\\s+/g, " ").trim();
         if (!/\\/(songs|sounds)\\//i.test(href) || !inner || inner.length > 180) continue;
         const title = inner;
-        const prev = links.slice(i + 1, i + 5).map((x) => x[2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/\\s+/g, " ").trim()).find((x) => x && x.length < 160 && !/^\\d{1,2}\\s/ .test(x));
+        const prev = links.slice(i + 1, i + 5).map((x) => x[2].replace(/<[^>]*>/g, " ").replace(/&amp;/g, "&").replace(/\\s+/g, " ").trim()).find((x) => x && x.length < 160 && !/^\\d{1,2}\\s/.test(x));
         const imageMatch = html.slice(Math.max(0, links[i].index - 1500), links[i].index).match(/<img[^>]+src=["']([^"']+)["']/i);
         const artist = (prev || "").replace(/\\d{1,2}\\s+[A-Z][a-z]{2}\\s+\\d{4}.*$/, "").trim() || "Ver artistas na fonte";
         if (rows.some((r) => r.title === title)) continue;
