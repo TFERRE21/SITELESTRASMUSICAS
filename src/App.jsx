@@ -46,6 +46,10 @@ export default function App() {
   const [catalogItems, setCatalogItems] = useState([]);
   const [catalogMessage, setCatalogMessage] = useState("Carregando catálogo...");
   const [lyricsModal, setLyricsModal] = useState(null);
+  const [chartCountry, setChartCountry] = useState("br");
+  const [chartItems, setChartItems] = useState([]);
+  const [chartMessage, setChartMessage] = useState("Carregando Top 20...");
+  const [chartGenre, setChartGenre] = useState("Todos");
 
   useEffect(() => {
     let active = true;
@@ -65,6 +69,27 @@ export default function App() {
     const interval = setInterval(refreshCatalog, 60_000);
     return () => { active = false; clearInterval(interval); };
   }, []);
+
+  useEffect(() => {
+    let active = true;
+    const loadChart = async () => {
+      setChartMessage("Atualizando ranking musical...");
+      try {
+        const response = await fetch(`/api/charts?country=${chartCountry}`);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Ranking temporariamente indisponível.");
+        if (!active) return;
+        setChartItems(Array.isArray(data.items) ? data.items : []);
+        setChartMessage(data.items?.length
+          ? `Top 20 atualizado pela fonte ${data.source}. Atualização: ${data.updatedAt ? new Date(data.updatedAt).toLocaleString("pt-BR") : "data não informada"}.`
+          : "Nenhuma música retornada pela fonte neste momento.");
+      } catch (error) {
+        if (active) setChartMessage(error.message || "Não foi possível carregar o ranking.");
+      }
+    };
+    loadChart();
+    return () => { active = false; };
+  }, [chartCountry]);
 
   useEffect(() => {
     const term = query.trim();
@@ -122,6 +147,7 @@ export default function App() {
         </a>
         <nav className={`main-nav ${menuOpen ? "main-nav--open" : ""}`} aria-label="Navegação principal">
           <a href="#descobrir" onClick={() => setMenuOpen(false)}>Descobrir</a>
+          <a href="#top20" onClick={() => setMenuOpen(false)}>Top 20</a>
           <a href="#generos" onClick={() => setMenuOpen(false)}>Gêneros</a>
           <a href="#sobre" onClick={() => setMenuOpen(false)}>Sobre o projeto</a>
         </nav>
@@ -160,6 +186,37 @@ export default function App() {
         </section>
 
         <AdSlot />
+
+        <section className="charts-section section-wrap" id="top20">
+          <div className="section-heading">
+            <div><span className="eyebrow"><span className="eyebrow__line" /> RANKING MUSICAL</span><h2>Top 20 <span>do momento.</span></h2><p>Ranking de músicas populares, carregado de uma fonte musical externa.</p><p className="catalog-status" role="status">{chartMessage}</p></div>
+          </div>
+          <div className="chart-toolbar">
+            <div className="chart-country-tabs" aria-label="Selecionar ranking por país">
+              <button className={chartCountry === "br" ? "chart-tab chart-tab--active" : "chart-tab"} onClick={() => { setChartCountry("br"); setChartGenre("Todos"); }}>🇧🇷 Nacionais / Brasil</button>
+              <button className={chartCountry === "us" ? "chart-tab chart-tab--active" : "chart-tab"} onClick={() => { setChartCountry("us"); setChartGenre("Todos"); }}>🌎 Internacionais</button>
+            </div>
+            <label className="chart-genre-select">Gênero
+              <select value={chartGenre} onChange={(event) => setChartGenre(event.target.value)}>
+                <option>Todos</option>
+                {[...new Set(chartItems.flatMap((item) => item.genres || [item.genre]).filter(Boolean))].sort().map((genre) => <option key={genre}>{genre}</option>)}
+              </select>
+            </label>
+          </div>
+          {chartItems.filter((item) => chartGenre === "Todos" || (item.genres || [item.genre]).includes(chartGenre)).length ? (
+            <div className="chart-list">
+              {chartItems.filter((item) => chartGenre === "Todos" || (item.genres || [item.genre]).includes(chartGenre)).map((item) => (
+                <article className="chart-row" key={item.id}>
+                  <span className="chart-rank">{String(item.rank).padStart(2, "0")}</span>
+                  {item.artworkUrl ? <img className="chart-cover" src={item.artworkUrl} alt="" loading="lazy" /> : <span className="chart-cover chart-cover--empty"><Music2 size={18} /></span>}
+                  <div className="chart-track-info"><strong>{item.title}</strong><span>{item.artist}</span><small>{item.genre || "Gênero não informado"}</small></div>
+                  {item.url && <a className="chart-open" href={item.url} target="_blank" rel="noreferrer" aria-label={`Abrir ${item.title} na fonte musical`}><ArrowRight size={17} /></a>}
+                </article>
+              ))}
+            </div>
+          ) : <div className="empty-state"><Music2 size={25} /><h3>Ranking indisponível</h3><p>{chartMessage}</p></div>}
+          <p className="chart-disclaimer">O ranking reflete os dados fornecidos pela fonte consultada e pode variar por país e horário. “Internacionais” usa o ranking dos Estados Unidos como referência, não uma lista mundial única.</p>
+        </section>
 
         <section className="discover section-wrap" id="descobrir">
           <div className="section-heading">
