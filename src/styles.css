@@ -288,3 +288,18 @@ body,.site-shell{background:#fff;color:#202027}
 .portal-song-back{border:0;background:#f2edfc;color:#6546d4;border-radius:8px;padding:10px 14px;font-size:12px;font-weight:700}
 @media(max-width:700px){.portal-song-header{padding:12px 16px;align-items:flex-start}.portal-song-header>div{justify-content:flex-end;gap:6px}.portal-song-action{font-size:0;padding:9px}.portal-song-action svg{width:17px;height:17px}.portal-song-main{padding:24px 16px 38px}.portal-song-columns{grid-template-columns:1fr;gap:12px}.portal-song-lyrics{padding:19px;min-height:260px}.portal-song-video{min-height:230px;padding:12px}.portal-song-video-link{min-height:150px}.portal-song-main>h1{font-size:30px}}
 @media print{body>*{display:none!important}.portal-song-page{position:static;overflow:visible}.portal-song-header,.portal-song-video,.portal-song-lyrics-actions,.portal-song-note,.portal-song-back{display:none!important}.portal-song-main{max-width:none;padding:0}.portal-song-columns{display:block}.portal-song-lyrics{border:0;padding:0}.portal-song-lyrics-text{color:#000}}
+
+
+/* Player incorporado e alinhado ao topo, ao lado da letra */
+.portal-song-video{align-self:start;justify-content:flex-start;min-height:0;padding:0 0 20px}
+.portal-song-video>h2{margin:0 0 14px}
+.portal-song-video-link{width:100%;min-height:230px;border:1px solid #e9e4f1;background:#faf9fc;padding:22px;cursor:pointer}
+.portal-song-video-link:hover{background:#f6f2fd;border-color:#d8cef1}
+.portal-song-video-link:disabled{opacity:.65;cursor:wait}
+.portal-video-frame{width:100%;aspect-ratio:16/9;overflow:hidden;border-radius:12px;background:#171421;box-shadow:0 8px 24px #20173818}
+.portal-video-frame iframe{display:block;width:100%;height:100%;border:0}
+.portal-video-caption{margin:10px 0 8px!important;font-size:12px!important;color:#625b70!important}
+.portal-video-change{border:0;background:transparent;padding:5px 0;color:#6d4ddd;font-size:12px;font-weight:700;cursor:pointer}
+.portal-video-error{margin:12px 0!important;padding:11px 12px;background:#fff5f3;border:1px solid #f1d5d0;border-radius:8px;color:#9a4135!important;font-size:12px!important;line-height:1.6}
+.portal-song-video>h3{font-size:16px;margin:18px 0 6px}
+@media(max-width:700px){.portal-song-video{padding:0 0 10px}.portal-song-video-link{min-height:175px}.portal-song-columns{display:flex;flex-direction:column}.portal-song-video{order:0}.portal-song-lyrics{order:1}}
