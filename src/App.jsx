@@ -50,6 +50,7 @@ export default function App() {
   const [chartItems, setChartItems] = useState([]);
   const [chartMessage, setChartMessage] = useState("Carregando Top 20...");
   const [chartGenre, setChartGenre] = useState("Todos");
+  const [artworkById, setArtworkById] = useState({});
 
   useEffect(() => {
     let active = true;
@@ -111,11 +112,26 @@ export default function App() {
     return () => { active = false; clearTimeout(timeout); };
   }, [query]);
 
+  useEffect(() => {
+    let active = true;
+    const missing = catalogItems.filter((track) => track.id && !artworkById[track.id]).slice(0, 24);
+    if (!missing.length) return undefined;
+    Promise.all(missing.map(async (track) => {
+      try {
+        const response = await fetch(`/api/artwork?q=${encodeURIComponent(`${track.title} ${track.artist}`)}`);
+        const data = await response.json();
+        return [track.id, data.artworkUrl || ""];
+      } catch { return [track.id, ""]; }
+    })).then((pairs) => { if (active) setArtworkById((current) => ({ ...current, ...Object.fromEntries(pairs) })); });
+    return () => { active = false; };
+  }, [catalogItems]);
+
   const sourceTracks = catalogItems.map((track, index) => ({
     ...track,
     color: ["lilac", "coral", "blue", "gold", "green", "pink"][index % 6],
     tag: track.provider === "LRCLIB" ? "LRCLIB" : "Catálogo",
-    genre: track.genre || "Gênero não informado",
+    genre: track.genre || "",
+    artworkUrl: track.artworkUrl || artworkById[track.id] || "",
   }));
 
   const filteredTracks = useMemo(() => sourceTracks.filter((track) => {
@@ -221,10 +237,9 @@ export default function App() {
             <div><span className="eyebrow"><span className="eyebrow__line" /> EXPLORE NO SEU RITMO</span><h2>Descubra seu próximo <span>favorito.</span></h2><p>Pesquise músicas do catálogo conectado e descubra novos artistas.</p><p className="catalog-status" role="status">{catalogMessage}</p></div>
             <div className="discover__count"><span className="count-dot" /> {filteredTracks.length} resultados</div>
           </div>
-          <form className="filters" onSubmit={(event) => { event.preventDefault(); const term = query.trim(); if (term.length >= 2) window.open(`https://www.letras.mus.br/?q=${encodeURIComponent(term)}`, "_blank", "noopener,noreferrer"); }}>
+          <form className="filters" onSubmit={async (event) => { event.preventDefault(); const term = query.trim(); if (term.length < 2) return; try { const response = await fetch(`/api/catalog?q=${encodeURIComponent(term)}&page=1`); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Pesquisa indisponível."); setCatalogItems(Array.isArray(data.items) ? data.items : []); setCatalogMessage(data.items?.length ? `${data.items.length} resultados encontrados.` : "Nenhum resultado encontrado. Tente outro termo."); } catch (error) { setCatalogMessage(error.message || "Não foi possível concluir a pesquisa agora."); } }}>
             <div className="search-box"><Search size={17} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Digite música ou artista..." aria-label="Buscar música ou artista" /><button className="search-submit" type="submit" disabled={query.trim().length < 2}><Search size={16} /><span>Pesquisar música</span></button></div>
-            <a className="text-link letras-search-link" href={query.trim().length >= 2 ? `https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}` : "https://www.letras.mus.br/"} target="_blank" rel="noreferrer">Buscar no Letras.mus.br <ArrowRight size={15} /></a>
-            <div className="category-list" id="generos" aria-label="Filtrar por gênero">
+             <div className="category-list" id="generos" aria-label="Filtrar por gênero">
               {categories.map((item) => <button type="button" key={item} className={category === item ? "category category--active" : "category"} onClick={() => { setCategory("Todas"); setQuery(item === "Todas" ? "" : item); }}>{item}</button>)}
             </div>
           </form>
@@ -232,8 +247,8 @@ export default function App() {
           {filteredTracks.length ? <div className="track-grid">{filteredTracks.map((track) => {
             const isSaved = saved.includes(track.title);
             return <article className="track-card" key={track.title}>
-              <div className="track-card__image"><Artwork color={track.color} index={sourceTracks.indexOf(track)} /><span className="track-tag">{track.tag}</span><button className={isSaved ? "save-button save-button--active" : "save-button"} onClick={() => toggleSaved(track.title)} aria-label={isSaved ? `Remover ${track.title} dos salvos` : `Salvar ${track.title}`} aria-pressed={isSaved}><Heart size={17} fill={isSaved ? "currentColor" : "none"} /></button></div>
-              <div className="track-card__body"><div><span className="track-genre">{track.genre}</span><h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id) { setNotice("Esta faixa é apenas um exemplo demonstrativo."); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
+              <div className="track-card__image">{track.artworkUrl ? <img className="track-artwork-photo" src={track.artworkUrl} alt={`Capa de ${track.title}`} loading="lazy" /> : <Artwork color={track.color} index={sourceTracks.indexOf(track)} />}<span className="track-tag">{track.tag}</span><button className={isSaved ? "save-button save-button--active" : "save-button"} onClick={() => toggleSaved(track.title)} aria-label={isSaved ? `Remover ${track.title} dos salvos` : `Salvar ${track.title}`} aria-pressed={isSaved}><Heart size={17} fill={isSaved ? "currentColor" : "none"} /></button></div>
+              <div className="track-card__body"><div>{track.genre && <span className="track-genre">{track.genre}</span>}<h3>{track.title}</h3><p>{track.artist}</p></div><button className="track-card__arrow" aria-label={`Ver detalhes de ${track.title}`} onClick={async () => { if (!track.id) { setNotice("Esta faixa é apenas um exemplo demonstrativo."); return; } try { const response = await fetch(`/api/lyrics/${track.id}`); const data = await response.json(); setLyricsModal({ title: track.title, artist: track.artist, text: data.lyrics || data.error || "Letra indisponível.", copyright: data.copyright || "" }); } catch { setLyricsModal({ title: track.title, artist: track.artist, text: "Não foi possível consultar a fonte de letras." }); } }}><ArrowRight size={18} /></button></div>
             </article>;
           })}</div> : <div className="empty-state"><Search size={25} /><h3>{catalogItems.length === 0 ? "Catálogo aguardando resultados reais" : "Nenhuma música encontrada"}</h3><p>{catalogItems.length === 0 ? "A fonte de músicas pode estar indisponível no momento. Tente novamente mais tarde ou pesquise diretamente no Letras.mus.br." : "Tente outro termo ou escolha uma categoria diferente."}</p>{query.trim().length >= 2 && <a className="button button--secondary" href={`https://www.letras.mus.br/?q=${encodeURIComponent(query.trim())}`} target="_blank" rel="noreferrer">Pesquisar no Letras.mus.br <ArrowRight size={15} /></a>}<button className="button button--secondary" onClick={() => { setQuery(""); setCategory("Todas"); }}>Limpar filtros</button></div>}
           <div className="catalog-note"><span><Sparkles size={15} /> Catálogo LRCLIB</span><p>Os resultados dependem da disponibilidade no LRCLIB. Confira os termos e direitos aplicáveis antes de republicar letras completas em um site comercial.</p></div>
