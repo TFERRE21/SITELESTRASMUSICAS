@@ -367,7 +367,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
       if (!response.ok) throw new Error(data.error || "Não foi possível consultar o catálogo interno.");
       setExternalChordMatches(Array.isArray(data.externalMatches) ? data.externalMatches : []);
       if (data.chord?.content) {
-        setChordInput(data.chord.content);
+        setChordInput(adaptChordContentForInstrument(data.chord.content, instrument, data.chord.source || ""));
         setTransposeBy(0);
         setChordCatalogStatus("found");
         setChordCatalogMessage("Acordes carregados diretamente no Site Músicas.");
