@@ -261,7 +261,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [chordCatalogMessage, setChordCatalogMessage] = useState("");
   const [externalChordMatches, setExternalChordMatches] = useState([]);
   const uniqueExternalChordMatches = [...new Map(externalChordMatches.filter((match) => match?.url && match?.title).map((match) => [normalize(`${match.title} ${match.artist || ""} ${(match.instrumentTracks || []).join(" ")}`), match])).values()].slice(0, 5);
-  const songsterrSearchUrl = `https://www.songsterr.com/a/wa/bestMatchForQueryStringPart?s=${encodeURIComponent((lyrics?.title || "") + " " + (lyrics?.artist || ""))}`;
+  const songsterrSearchUrl = `https://www.songsterr.com/?pattern=${encodeURIComponent([lyrics?.title, lyrics?.artist].filter(Boolean).join(" "))}`;
   const [savingChord, setSavingChord] = useState(false);
   const [generatingChord, setGeneratingChord] = useState(false);
   const chordNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
