@@ -389,8 +389,13 @@ const server = http.createServer(async (req, res) => {
               const content = typeof body === "string" ? body.trim() : Array.isArray(body) ? body.map(String).join("\\n").trim() : "";
               const candidateTitle = String(candidate.song_name || candidate.songName || candidate.title || title).slice(0, 200);
               const candidateArtist = String(candidate.artist_name || candidate.artistName || candidate.band_name || artist).slice(0, 160);
-              if (content.length > 20 && content.length <= 30000 && key(candidateTitle) === titleKey &&
-                  (key(candidateArtist) === artistKey || key(candidateArtist).includes(artistKey) || artistKey.includes(key(candidateArtist)))) {
+              const candidateTitleTokens = key(candidateTitle).split(" ").filter(Boolean);
+              const candidateArtistTokens = key(candidateArtist).split(" ").filter(Boolean);
+              const titleSimilarity = titleTokens.length ? titleTokens.filter((token) => candidateTitleTokens.includes(token)).length / titleTokens.length : 0;
+              const artistSimilarity = artistTokens.length ? artistTokens.filter((token) => candidateArtistTokens.includes(token)).length / artistTokens.length : 0;
+              // UG titles often append "(chords)", "chords", version labels, or arrangement names.
+              // Use token overlap instead of strict equality so valid chord pages aren't discarded.
+              if (content.length > 20 && content.length <= 30000 && titleSimilarity >= 0.75 && artistSimilarity >= 0.5) {
                 chord = {
                   id: "ultimate-guitar-" + String(candidate.id || slugUG(candidateArtist) + "-" + slugUG(candidateTitle)),
                   title: candidateTitle,
