@@ -1,0 +1,54 @@
+/* Grade de artistas por gênero: cards lado a lado e responsivos */
+.portal-artist-list {
+  display: grid !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  border-top: 0 !important;
+}
+.portal-artist-result {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+  padding: 14px !important;
+  border: 1px solid #e9e5f0 !important;
+  border-radius: 12px !important;
+  background: #fff !important;
+  box-shadow: 0 5px 18px #33234d08;
+}
+.portal-artist-result .portal-artist-avatar { width: 100% !important; height: auto !important; }
+.portal-artist-result .portal-artist-avatar .music-cover {
+  width: 100% !important;
+  height: auto !important;
+  aspect-ratio: 1 / 1 !important;
+  border-radius: 10px !important;
+}
+.portal-artist-result .portal-result__info { width: 100%; min-width: 0; }
+.portal-artist-result .portal-result__info h3 {
+  font-size: 14px !important;
+  line-height: 1.35 !important;
+  white-space: normal !important;
+  overflow-wrap: anywhere;
+}
+.portal-artist-result .portal-result__info p,
+.portal-artist-result .portal-result__info small { font-size: 11px !important; line-height: 1.5 !important; }
+.portal-artist-result .portal-result__open {
+  justify-content: center;
+  width: 100%;
+  min-height: 36px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: #f4f0ff;
+}
+/* Remover completamente o anúncio promocional de Premium da página inicial */
+.portal-premium-card { display: none !important; }
+@media (max-width: 900px) {
+  .portal-artist-list { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+}
+@media (max-width: 600px) {
+  .portal-artist-list { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 10px !important; }
+  .portal-artist-result { padding: 10px !important; }
+  .portal-artist-result .portal-result__info h3 { font-size: 12px !important; }
+  .portal-artist-result .portal-result__open { font-size: 11px !important; }
+}
