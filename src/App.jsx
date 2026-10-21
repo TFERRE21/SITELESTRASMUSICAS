@@ -30,17 +30,24 @@ function ArtistPortrait({ name, genre, index }) {
   useEffect(() => {
     let cancelled = false;
     const lookup = async () => {
-      const candidates = [name.replace(/ /g, "_")];
       for (const lang of ["pt", "en"]) {
-        for (const title of candidates) {
-          try {
-            const response = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, { headers: { Accept: "application/json" } });
-            if (!response.ok) continue;
-            const data = await response.json();
-            const imageUrl = data.thumbnail?.source || data.originalimage?.source || "";
+        try {
+          const searchUrl = new URL(`https://${lang}.wikipedia.org/w/api.php`);
+          searchUrl.search = new URLSearchParams({ action: "query", format: "json", origin: "*", generator: "search", gsrsearch: name, gsrnamespace: "0", gsrlimit: "1", prop: "pageimages", piprop: "thumbnail", pithumbsize: "500" }).toString();
+          const searchResponse = await fetch(searchUrl);
+          if (searchResponse.ok) {
+            const searchData = await searchResponse.json();
+            const page = Object.values(searchData.query?.pages || {})[0];
+            const imageUrl = page?.thumbnail?.source || "";
             if (imageUrl && !cancelled) { setImage(imageUrl); return; }
-          } catch {}
-        }
+          }
+          const summaryResponse = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(name.replace(/ /g, "_"))}`, { headers: { Accept: "application/json" } });
+          if (summaryResponse.ok) {
+            const summary = await summaryResponse.json();
+            const imageUrl = summary.thumbnail?.source || summary.originalimage?.source || "";
+            if (imageUrl && !cancelled) { setImage(imageUrl); return; }
+          }
+        } catch {}
       }
       if (!cancelled) setFailed(true);
     };
