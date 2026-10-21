@@ -754,3 +754,6 @@ body{background:#f7f8fc;color:var(--sl-ink)}
  .portal-home-grid{grid-template-columns:minmax(0,1fr);padding:14px 12px;gap:17px}
  .portal-home-left,.portal-home-center,.portal-home-right{grid-column:1;grid-row:auto;gap:12px}
 }
+
+.portal-chart-source__name{display:block;flex:0 0 100%;margin-top:3px;font-weight:750;color:#8b6b2d}
+.portal-chart-source{flex-wrap:wrap}
