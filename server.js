@@ -12,6 +12,7 @@ const catalogFile = path.join(dataDir, "catalog.json");
 const usersFile = path.join(dataDir, "users.json");
 const sessionsFile = path.join(dataDir, "sessions.json");
 const ticketsFile = path.join(dataDir, "support-tickets.json");
+const commentsFile = path.join(dataDir, "song-comments.json");
 const PORT = Number(process.env.PORT || 3000);
 const USER_AGENT = "SomELetra/0.2 (https://github.com/TFERRE21/SITELESTRASMUSICAS)";
 let cachedCatalog = [];
@@ -237,6 +238,31 @@ const server = http.createServer(async (req, res) => {
       users[index].favorites = favorites; await writeJsonFile(usersFile, users);
       return json(res, 200, { favorites });
     } catch (error) { return json(res, 400, { error: error.message || "Não foi possível salvar favoritos." }); }
+  }
+  if (url.pathname === "/api/comments" && req.method === "GET") {
+    const title = String(url.searchParams.get("title") || "").trim().slice(0, 200);
+    const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
+    if (!title || !artist) return json(res, 400, { error: "Informe a música e o artista." });
+    const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
+    const all = await readJsonFile(commentsFile, []);
+    const comments = all.filter((item) => key(item.title) === key(title) && key(item.artist) === key(artist)).slice(0, 100);
+    return json(res, 200, { comments, total: comments.length });
+  }
+  if (url.pathname === "/api/comments" && req.method === "POST") {
+    const user = await currentUser(req);
+    if (!user) return json(res, 401, { error: "Entre na sua conta para comentar." });
+    try {
+      const body = await readBody(req);
+      const title = String(body.title || "").trim().slice(0, 200);
+      const artist = String(body.artist || "").trim().slice(0, 200);
+      const text = String(body.text || "").trim().slice(0, 1200);
+      if (!title || !artist || text.length < 3) return json(res, 400, { error: "Informe a música, o artista e um comentário com pelo menos 3 caracteres." });
+      const all = await readJsonFile(commentsFile, []);
+      const comment = { id: randomBytes(12).toString("hex"), songKey: title.toLowerCase() + "|" + artist.toLowerCase(), title, artist, userId: user.id, name: user.name, text, createdAt: new Date().toISOString() };
+      all.unshift(comment);
+      await writeJsonFile(commentsFile, all.slice(0, 20000));
+      return json(res, 201, { comment });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível publicar o comentário." }); }
   }
   if (url.pathname === "/api/support/tickets" && req.method === "POST") {
     try {
