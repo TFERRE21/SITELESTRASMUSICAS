@@ -40,7 +40,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
       try {
         const artistQuery = await request(lyrics.artist);
         const sameArtist = [...catalog, ...artistQuery].filter((item) =>
-          norm(item.artist) === norm(lyrics.artist) &&
+          (norm(item.artist) === norm(lyrics.artist) || norm(item.artist).includes(norm(lyrics.artist)) || norm(lyrics.artist).includes(norm(item.artist))) &&
           norm(item.title) !== norm(lyrics.title)
         ).filter((item, index, list) => list.findIndex((x) => norm(x.title) === norm(item.title) && norm(x.artist) === norm(item.artist)) === index).slice(0, 6);
         const genreName = lyrics.genre || "";
@@ -48,16 +48,21 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
         const genreQueries = isGospel ? ["Gospel", "Christian & Gospel", "louvor gospel"] :
           genreName ? [genreName, `música ${genreName}`] : ["músicas populares Brasil"];
         const relatedLists = await Promise.all(genreQueries.map(request));
-        const relatedPool = [...catalog, ...relatedLists.flat()].filter((item) =>
+        const searchedRelated = relatedLists.flat();
+        const relatedPool = [...catalog, ...searchedRelated].filter((item) =>
           norm(item.title) !== norm(lyrics.title) &&
           norm(item.artist) !== norm(lyrics.artist)
         );
         const genreMatches = relatedPool.filter((item) => {
           const tags = norm([item.genre, ...(item.genres || []).map((g) => typeof g === "string" ? g : g.name), item.title, item.artist, item.album].filter(Boolean).join(" "));
           return isGospel ? /gospel|christian|relig|louvor|adora|worship|evangel/i.test(tags) :
-            genreName ? tags.includes(norm(genreName)) : true;
+            genreName ? tags.includes(norm(genreName)) : false;
         });
-        const picks = (genreMatches.length ? genreMatches : relatedPool).filter((item, index, list) =>
+        // A busca pelo termo de gênero é relevante mesmo quando a API não preenche o campo genre.
+        const sourceForPicks = isGospel || genreName ? [...genreMatches, ...searchedRelated] : relatedPool;
+        const picks = sourceForPicks.filter((item) =>
+          norm(item.title) !== norm(lyrics.title) && norm(item.artist) !== norm(lyrics.artist)
+        ).filter((item, index, list) =>
           list.findIndex((x) => norm(x.title) === norm(item.title) && norm(x.artist) === norm(item.artist)) === index
         ).slice(0, 8);
         if (!cancelled) { setArtistItems(sameArtist); setRelatedItems(picks); }
@@ -83,12 +88,6 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
             <p className="reference-song-album">{lyrics.album ? `Álbum: ${lyrics.album}` : "Detalhes do lançamento conforme disponíveis no catálogo"}{lyrics.releaseDate ? ` · Ano: ${String(lyrics.releaseDate).slice(0,4)}` : ""}{lyrics.genre ? ` · Gênero: ${lyrics.genre}` : ""}</p>
             <div className="reference-song-actions"><button className="reference-yellow" onClick={onListen}>{isPreviewPlaying ? <><Square size={15} fill="currentColor"/> Parar música</> : <><Play size={16} fill="currentColor"/> Ouvir música</>}</button><button onClick={onNextTrack} disabled={nextTrackLoading} title="Carregar outra música deste artista"><SkipForward size={16}/>{nextTrackLoading ? "Buscando..." : "Próxima do artista"}</button><button onClick={onPrint}><Printer size={16}/> Imprimir</button><button onClick={onDownload} disabled={!hasLyrics}><Download size={16}/> Baixar (PDF)</button><button onClick={onShare}><Share2 size={16}/> Compartilhar</button><span className="reference-font-controls"><button onClick={()=>setFontScale(Math.max(.8,fontScale-.1))} aria-label="Diminuir fonte">A-</button><button onClick={()=>setFontScale(Math.min(1.4,fontScale+.1))} aria-label="Aumentar fonte">A+</button></span><button className={saved ? "reference-save is-saved" : "reference-save"} onClick={onSave}><Heart size={17} fill={saved ? "currentColor" : "none"}/> Favoritar</button></div>
           </div>
-        </section>
-        <section className="reference-inline-player" aria-label="Mini player musical">
-          {lyrics.previewUrl && <audio ref={audioRef} src={lyrics.previewUrl} preload="metadata" onTimeUpdate={(event)=>setPreviewTime(event.currentTarget.currentTime || 0)} onDurationChange={(event)=>{const duration=event.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setPreviewDuration(duration)}} onLoadedMetadata={(event)=>{const duration=event.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setPreviewDuration(duration)}} onLoadedData={(event)=>{const audio=event.currentTarget;if(Number.isFinite(audio.duration)&&audio.duration>0)setPreviewDuration(audio.duration);setPreviewTime(audio.currentTime||0)}} onPlaying={()=>setIsPreviewPlaying(true)} onPause={()=>setIsPreviewPlaying(false)} onEnded={()=>{setIsPreviewPlaying(false);setPreviewTime(0)}} />}
-          <div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>{lyrics.previewUrl ? (isPreviewPlaying ? "Tocando agora" : "Mini player") : (video ? "Player oficial incorporado" : "Player da música completa")}</strong><small>{lyrics.previewUrl ? "Prévia de áudio do catálogo musical" : "Buscando versão oficial completa quando disponível"}</small></div><button type="button" onClick={onListen} className="reference-yellow">{lyrics.previewUrl ? (isPreviewPlaying ? "Parar música" : "Ouvir prévia") : (video ? "Ouvir no player" : videoLoading ? "Carregando..." : "Carregar música")}</button></div>
-          {lyrics.previewUrl ? <div className="reference-inline-player__timeline"><span>{Math.floor(previewTime/60)}:{String(Math.floor(previewTime%60)).padStart(2,"0")}</span><input type="range" min="0" max={Math.max(1,previewDuration)} step="0.1" value={Math.min(previewTime,previewDuration || 0)} onChange={(event)=>onSeekPreview(Number(event.target.value))} aria-label="Avançar ou retroceder na prévia"/><span>{Math.floor(previewDuration/60)}:{String(Math.floor(previewDuration%60)).padStart(2,"0")}</span></div> : <div className="reference-inline-player__timeline reference-inline-player__timeline--unavailable"><span>--:--</span><input type="range" min="0" max="1" value="0" disabled aria-label="Barra indisponível sem prévia de áudio"/><span>--:--</span></div>}
-          <p className="reference-inline-player__notice">{lyrics.previewUrl ? "A barra permite avançar e voltar dentro da prévia disponível. A duração depende do catálogo; nem toda faixa oferece a música completa." : "Para evitar redirecionamentos, carregue o player oficial abaixo. O controle de avanço do YouTube fica dentro do próprio player; não é possível controlar o áudio do YouTube por esta barra personalizada."}</p>
         </section>
         <div className="reference-song-grid">
           <section className="reference-lyrics-card"><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></section>
@@ -266,31 +265,15 @@ export default function App() {
   };
   const listenToCurrentSong = async () => {
     if (!lyrics) return;
-    if (lyrics.previewUrl && audioRef.current) {
-      try {
-        if (isPreviewPlaying) {
-          audioRef.current.pause();
-          audioRef.current.currentTime = 0;
-          setPreviewTime(0);
-          setIsPreviewPlaying(false);
-        } else {
-          await audioRef.current.play();
-          setIsPreviewPlaying(true);
-        }
-        return;
-      } catch {
-        setIsPreviewPlaying(false);
-        setMessage("Não foi possível reproduzir esta prévia. Tente novamente.");
-        return;
-      }
-    }
+    // O botão principal prioriza o vídeo oficial incorporado, em vez da prévia curta do catálogo.
     if (video?.videoId) {
       setAutoplayVideo(true);
       document.querySelector(".reference-video-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
     if (!videoLoading) {
-      loadMusicVideo(true);
+      await loadMusicVideo(true);
+      window.setTimeout(() => document.querySelector(".reference-video-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
     }
   };
   const seekPreview = (time) => {
