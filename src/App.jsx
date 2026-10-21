@@ -296,8 +296,33 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           setChordCatalogMessage("Cifra carregada do catálogo do Som & Letra.");
         } else {
           setChordInput("");
-          setChordCatalogStatus("empty");
-          setChordCatalogMessage("Esta música ainda não tem cifra cadastrada no catálogo interno.");
+          setChordCatalogStatus("loading");
+          setChordCatalogMessage("Nenhuma cifra no catálogo. Tentando gerar uma sugestão automaticamente...");
+          try {
+            const generatedResponse = await fetch("/api/chords/generate", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title: lyrics.title, artist: lyrics.artist, instrument })
+            });
+            const generatedData = await generatedResponse.json();
+            if (cancelled) return;
+            if (!generatedResponse.ok) {
+              if (generatedResponse.status === 503) {
+                setChordCatalogStatus("empty");
+                setChordCatalogMessage("Não há cifra cadastrada e a geração automática ainda precisa ser ativada no servidor.");
+              } else {
+                throw new Error(generatedData.error || "Não foi possível gerar uma sugestão automática.");
+              }
+            } else {
+              setChordInput(generatedData.chord?.content || "");
+              setChordCatalogStatus("found");
+              setChordCatalogMessage("Sugestão harmônica gerada automaticamente por IA e salva no catálogo. Não é uma cifra oficial; confira os acordes.");
+            }
+          } catch (generationError) {
+            if (cancelled) return;
+            setChordCatalogStatus("empty");
+            setChordCatalogMessage(generationError.message || "Não há cifra cadastrada e a geração automática falhou.");
+          }
         }
         setTransposeBy(0);
       })
