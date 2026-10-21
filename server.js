@@ -354,7 +354,7 @@ const server = http.createServer(async (req, res) => {
     const query = normalize(q);
     const tokens = query.split(" ").filter((token) => token.length > 1);
     const relevant = (item) => {
-      const fields = normalize([item.title, item.artist, item.album].filter(Boolean).join(" "));
+      const fields = normalize([item.title, item.artist, item.album, item.genre, ...(item.genres || [])].filter(Boolean).join(" "));
       return fields.includes(query) || (tokens.length > 0 && tokens.every((token) => fields.includes(token)));
     };
     const mapApple = (track) => ({
