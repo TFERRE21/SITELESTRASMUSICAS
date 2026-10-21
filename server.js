@@ -354,8 +354,12 @@ const server = http.createServer(async (req, res) => {
     if (queryText.length >= 2) {
       try {
         const mbUrl = new URL("https://musicbrainz.org/ws/2/artist");
-        const safeQuery = queryText.replace(/["\\]/g, " ").replace(/\s+/g, " ").trim();
-        mbUrl.searchParams.set("query", `artist:"${safeQuery}"`);
+        const safeQuery = queryText.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9'& -]/g, " ").replace(/\s+/g, " ").trim();
+        const tokens = safeQuery.split(" ").filter(Boolean);
+        // Prefix matching lets the autocomplete find artists while the user is still typing,
+        // instead of requiring the full artist name to match as an exact phrase.
+        const artistQuery = tokens.map((token) => `artist:${token}*`).join(" AND ");
+        mbUrl.searchParams.set("query", artistQuery);
         mbUrl.searchParams.set("fmt", "json");
         mbUrl.searchParams.set("limit", String(limit));
         mbUrl.searchParams.set("offset", String(offset));
