@@ -773,13 +773,33 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     setLyricsLoading(true);
     setLyrics({ title: item.title, artist: item.artist, text: "Carregando letra...", previewUrl: item.previewUrl || "" });
     try {
-      const endpoint = String(item.id || "").startsWith("itunes-") || String(item.id || "").startsWith("mb-")
-        ? `/api/lyrics/search?title=${encodeURIComponent(item.title)}&artist=${encodeURIComponent(item.artist)}`
-        : `/api/lyrics/${encodeURIComponent(item.id)}`;
-      const response = await fetch(endpoint);
-      const data = await response.json();
-      setLyrics({ ...item, title: data.trackName || item.title, artist: data.artistName || item.artist, text: String(data.lyrics || "").trim() || data.error || (response.status === 503 || response.status === 502 ? "Letra indisponível no momento. Tente novamente mais tarde." : "Letra não encontrada para esta música."), previewUrl: item.previewUrl || "" });
-    } catch (error) { setLyrics({ ...item, title: item.title, artist: item.artist, text: error?.message || "Não foi possível carregar a letra. Verifique sua conexão e tente novamente.", previewUrl: item.previewUrl || "" }); }
+      // Try the catalog ID first when it is a numeric LRCLIB ID; otherwise search by title/artist.
+      const isLrclibId = /^\\d+$/.test(String(item.id || ""));
+      let response = null;
+      let data = {};
+      if (isLrclibId) {
+        try {
+          response = await fetch(`/api/lyrics/${encodeURIComponent(item.id)}`);
+          data = await response.json();
+        } catch { /* Fall back to a title/artist search below. */ }
+      }
+      if (!response?.ok || !String(data.lyrics || "").trim()) {
+        response = await fetch(`/api/lyrics/search?title=${encodeURIComponent(item.title)}&artist=${encodeURIComponent(item.artist)}`);
+        data = await response.json();
+      }
+      const text = String(data.lyrics || "").trim();
+      setLyrics({
+        ...item,
+        title: data.trackName || item.title,
+        artist: data.artistName || item.artist,
+        text: text || data.error || (response.status === 503 || response.status === 502
+          ? "O serviço de letras está temporariamente instável. Tente novamente mais tarde."
+          : "Não encontramos a letra desta música nas fontes disponíveis."),
+        previewUrl: item.previewUrl || ""
+      });
+    } catch (error) {
+      setLyrics({ ...item, title: item.title, artist: item.artist, text: "Não foi possível carregar a letra agora. Tente novamente em instantes.", previewUrl: item.previewUrl || "" });
+    }
     finally { setLyricsLoading(false); }
   };
 
