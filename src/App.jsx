@@ -101,6 +101,68 @@ function GenreDirectoryPage({ name, onBack, onViewArtist }) {
   </div>;
 }
 
+
+const siteSections = {
+  letras: { title: "Letras de músicas", kicker: "PESQUISA MUSICAL", description: "Encontre letras, músicas e artistas em um só lugar.", intro: "Busque por música, cantor ou trecho da letra." },
+  artistas: { title: "Explore artistas", kicker: "ARTISTAS", description: "Descubra cantores e bandas que fazem parte da sua trilha sonora.", intro: "Pesquise um artista para encontrar suas músicas." },
+  albuns: { title: "Álbuns musicais", kicker: "DISCOGRAFIA", description: "Explore lançamentos e álbuns dos seus artistas favoritos.", intro: "Encontre álbuns e músicas por artista." },
+  playlists: { title: "Playlists para cada momento", kicker: "SUA TRILHA SONORA", description: "Descubra estilos e ideias para montar sua próxima playlist.", intro: "Escolha um estilo ou busque suas músicas favoritas." },
+  "em-alta": { title: "Em alta agora", kicker: "RANKINGS MUSICAIS", description: "Veja músicas populares no Brasil e no mundo.", intro: "Abra uma música para consultar sua letra." },
+  generos: { title: "Explore os gêneros", kicker: "GÊNEROS MUSICAIS", description: "Cada estilo tem sua história. Encontre os artistas do seu gênero favorito.", intro: "Escolha um gênero para abrir sua página exclusiva." }
+};
+const sectionSlug = (value) => normalize(value).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+function SiteSectionPage({ section, chart, globalChart, onNavigate, onGenre, onSearch, onOpenSong, onAccount, onSupport }) {
+  const config = siteSections[section] || siteSections.letras;
+  const [term, setTerm] = useState("");
+  const songs = section === "em-alta" ? [...chart, ...globalChart] : chart;
+  const artists = [];
+  for (const item of [...chart, ...globalChart]) {
+    const name = item.artist || item.artistName;
+    if (name && !artists.some((artist) => normalize(artist.name) === normalize(name))) artists.push({ name, artworkUrl: item.artworkUrl || item.artworkUrl100, item });
+  }
+  const albums = [];
+  for (const item of [...chart, ...globalChart]) {
+    const name = item.album;
+    if (name && !albums.some((album) => normalize(album.name) === normalize(name))) albums.push({ name, artist: item.artist || item.artistName, artworkUrl: item.artworkUrl || item.artworkUrl100, item });
+  }
+  const submitSearch = (event) => { event.preventDefault(); if (term.trim()) onSearch(term.trim()); };
+  const genresToShow = ["Gospel", "Sertanejo", "MPB", "Pop", "Rock", "Rap", "Funk", "Pagode", "Samba", "Forró", "Reggae", "Indie", "Jazz", "Música Latina"];
+  const playlists = [
+    { title: "Louvor e adoração", genre: "Gospel", desc: "Músicas para renovar a fé" },
+    { title: "Sertanejo apaixonado", genre: "Sertanejo", desc: "Clássicos e sucessos atuais" },
+    { title: "Brasil em canção", genre: "MPB", desc: "Grandes vozes da música brasileira" },
+    { title: "Pop para animar", genre: "Pop", desc: "Hits para todos os momentos" },
+    { title: "Pagode com amigos", genre: "Pagode", desc: "Samba e pagode para curtir junto" },
+    { title: "Rap nacional", genre: "Rap", desc: "Rimas e vozes brasileiras" }
+  ];
+  return <div className="genre-directory site-section-page">
+    <header className="genre-directory-hero">
+      <div className="genre-directory-hero__texture" />
+      <div className="section-page-header">
+        <a className="section-page-brand" href="/" onClick={(event) => { event.preventDefault(); onNavigate("home"); }}><Music2 size={25} fill="currentColor"/><span>Site <em>Músicas</em><small>LETRAS QUE TOCAM VOCÊ</small></span></a>
+        <nav className="section-page-nav" aria-label="Navegação principal">
+          {[["home","Início"],["letras","Letras"],["artistas","Artistas"],["albuns","Álbuns"],["playlists","Playlists"],["em-alta","Em Alta"],["generos","Gêneros"]].map(([key,label]) => <button className={section === key ? "active" : ""} key={key} onClick={() => onNavigate(key)}>{label}</button>)}
+        </nav>
+        <div className="section-page-actions"><button onClick={onAccount}>Entrar / Meus Dados</button><button onClick={onSupport}>Suporte</button></div>
+      </div>
+      <div className="section-page-hero">
+        <span className="genre-directory-kicker">{config.kicker}</span>
+        <h1>{config.title}</h1><p>{config.description}</p><small>{config.intro}</small>
+        {["letras","artistas","albuns"].includes(section) && <form className="section-page-search" onSubmit={submitSearch}><Search size={19}/><input value={term} onChange={(event) => setTerm(event.target.value)} placeholder={section === "letras" ? "Buscar música, artista ou trecho da letra..." : section === "artistas" ? "Digite o nome do artista..." : "Digite o nome do álbum ou artista..."} aria-label={config.intro}/><button type="submit">Pesquisar <ArrowRight size={16}/></button></form>}
+      </div>
+    </header>
+    <main className="section-page-content">
+      {section === "generos" && <><div className="section-page-heading"><h2>Escolha seu gênero musical</h2><p>Abra uma página dedicada para conhecer os artistas de cada estilo.</p></div><div className="section-page-genre-grid">{genresToShow.map((name, index) => <button key={name} onClick={() => onGenre(name)}><span>{["✝","♫","♪","☆","♬","♩","◉","▤"][index%8]}</span><strong>{name}</strong><small>Ver artistas <ChevronRight size={14}/></small></button>)}</div></>}
+      {section === "artistas" && <><div className="section-page-heading"><h2>Artistas em destaque</h2><p>Escolha um nome para pesquisar as músicas disponíveis no catálogo.</p></div><div className="section-page-cards">{artists.slice(0,32).map((artist,index)=><button className="section-page-card" key={artist.name} onClick={() => onSearch(artist.name)}><Cover item={{title:artist.name,artworkUrl:artist.artworkUrl}} index={index}/><strong>{artist.name}</strong><span>Ver músicas <ChevronRight size={14}/></span></button>)}</div>{!artists.length && <p className="section-page-empty">Os artistas aparecerão aqui conforme o catálogo musical for carregado. Use a busca acima para encontrar um cantor.</p>}</>}
+      {section === "albuns" && <><div className="section-page-heading"><h2>Álbuns do catálogo</h2><p>Explore álbuns encontrados nas músicas em destaque.</p></div><div className="section-page-cards">{albums.slice(0,32).map((album,index)=><button className="section-page-card" key={album.name} onClick={() => onSearch(album.name)}><Cover item={{title:album.name,artworkUrl:album.artworkUrl}} index={index}/><strong>{album.name}</strong><small>{album.artist || "Artista"}</small><span>Ver álbum <ChevronRight size={14}/></span></button>)}</div>{!albums.length && <p className="section-page-empty">Pesquise um artista ou álbum no campo acima para encontrar resultados.</p>}</>}
+      {section === "playlists" && <><div className="section-page-heading"><h2>Encontre seu próximo som</h2><p>Seleções por estilo para você descobrir artistas e músicas.</p></div><div className="section-page-playlists">{playlists.map((playlist,index)=><button key={playlist.title} className={"section-page-playlist section-page-playlist--"+index%6} onClick={() => onGenre(playlist.genre)}><span className="section-page-playlist-icon"><ListMusic size={28}/></span><span><strong>{playlist.title}</strong><small>{playlist.desc}</small><em>Explorar músicas <ArrowRight size={14}/></em></span></button>)}</div></>}
+      {section === "em-alta" && <><div className="section-page-heading"><h2>Mais tocadas agora</h2><p>Seleção baseada nos rankings musicais disponíveis.</p></div><div className="section-page-song-list">{songs.slice(0,40).map((item,index)=><button key={item.id || (item.title || item.name)+index} onClick={() => onOpenSong({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><b>{index+1}</b><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={index}/><span><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName || "Artista não informado"}</small></span><ChevronRight size={17}/></button>)}</div>{!songs.length && <p className="section-page-empty">O ranking está sendo atualizado. Tente novamente em instantes.</p>}</>}
+      {section === "letras" && <><div className="section-page-heading"><h2>Encontre a letra que procura</h2><p>Digite o título, artista ou uma frase da música no campo acima.</p></div><div className="section-page-shortcuts">{["Ana Castela","Jorge & Mateus","Aline Barros","Marília Mendonça","Roberto Carlos","Gusttavo Lima"].map((name) => <button key={name} onClick={() => onSearch(name)}><Search size={15}/>{name}<ChevronRight size={14}/></button>)}</div></>}
+    </main>
+    <footer className="section-page-footer"><button onClick={() => onNavigate("home")}><Home size={15}/> Voltar para Início</button><span>© {new Date().getFullYear()} Site Músicas · Letras que tocam você</span></footer>
+  </div>;
+}
+
 function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, onPrint, onDownload, onShare, onVideo, onListen, autoplayVideo, onNextTrack, nextTrackLoading, onSave, saved, catalog, onOpen, fontScale, setFontScale, account, comments, commentsLoading, commentText, setCommentText, onSubmitComment, commentError, commentNotice, audioRef, isPreviewPlaying, previewTime, previewDuration, onSeekPreview }) {
   const [artistItems, setArtistItems] = useState([]);
   const [relatedItems, setRelatedItems] = useState([]);
@@ -201,6 +263,7 @@ export default function App() {
   const [genre, setGenre] = useState("Todos");
   const [genrePage, setGenrePage] = useState("");
   const [genreRoute, setGenreRoute] = useState(() => { const match = window.location.pathname.match(/^\/generos\/([^/]+)/); return match ? genreFromSlug(decodeURIComponent(match[1])) : ""; });
+  const [sectionRoute, setSectionRoute] = useState(() => { const path = window.location.pathname.split("/").filter(Boolean)[0] || ""; return ["letras","artistas","albuns","playlists","em-alta","generos"].includes(path) ? path : ""; });
   const [genreArtists, setGenreArtists] = useState([]);
   const [genreArtistsLoading, setGenreArtistsLoading] = useState(false);
   const [results, setResults] = useState([]);
@@ -422,10 +485,12 @@ export default function App() {
 
   useEffect(() => {
     const openFromAddress = () => {
-      const routeMatch = window.location.pathname.match(/^\/generos\/([^/]+)/);
-      const routeGenre = routeMatch ? genreFromSlug(decodeURIComponent(routeMatch[1])) : "";
+      const pathParts = window.location.pathname.split("/").filter(Boolean);
+      const routeGenre = pathParts[0] === "generos" && pathParts[1] ? genreFromSlug(decodeURIComponent(pathParts[1])) : "";
+      const section = ["letras","artistas","albuns","playlists","em-alta","generos"].includes(pathParts[0]) ? pathParts[0] : "";
       setGenreRoute(routeGenre);
-      if (routeGenre) { setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); return; }
+      setSectionRoute(section && !routeGenre ? section : "");
+      if (routeGenre || section && !new URLSearchParams(window.location.search).has("title")) { setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); return; }
       const params = new URLSearchParams(window.location.search);
       const title = params.get("title");
       const artist = params.get("artist");
@@ -486,19 +551,31 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
+  const navigateSection = (section) => {
+    setLyrics(null); setVideo(null); setVideoError(""); setGenreRoute(""); setGenrePage("");
+    setSectionRoute(section === "home" ? "" : section);
+    const path = section === "home" ? "/" : `/${section}`;
+    window.history.pushState({ section }, "", path);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    setMobileOpen(false);
+  };
   const openGenrePage = (name) => {
-    setGenre(name); setGenrePage(name); setGenreRoute(name); setQuery(name); setSubmittedQuery("");
+    setGenre(name); setGenrePage(name); setGenreRoute(name); setSectionRoute(""); setQuery(name); setSubmittedQuery("");
     setResults([]); setGenreArtists([]); setLyrics(null); setVideo(null); setVideoError("");
     window.history.pushState({ genre: name }, "", `/generos/${genreSlug(name)}`);
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const backFromGenre = () => {
-    setGenreRoute(""); setGenrePage(""); setSubmittedQuery(""); setLyrics(null); setVideo(null);
+    setGenreRoute(""); setSectionRoute(""); setGenrePage(""); setSubmittedQuery(""); setLyrics(null); setVideo(null);
     window.history.pushState({}, "", "/"); window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const openArtistSongs = (name) => {
-    setGenreRoute(""); setGenrePage(""); window.history.pushState({}, "", "/");
+    setGenreRoute(""); setSectionRoute(""); setGenrePage(""); window.history.pushState({}, "", "/");
     setQuery(name); search(name, 1); window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const searchFromSection = (term) => {
+    setGenreRoute(""); setSectionRoute(""); setGenrePage(""); setQuery(term);
+    window.history.pushState({}, "", "/"); search(term, 1); window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const backToPortal = () => { window.history.replaceState({}, "", window.location.pathname); setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); };
   const shareCurrentSong = async () => { try { if (navigator.share) await navigator.share({title:lyrics?.title || "Site Músicas", text:`${lyrics?.title || ""} — ${lyrics?.artist || ""}`, url:window.location.href}); else if (navigator.clipboard) await navigator.clipboard.writeText(window.location.href); } catch {} };
@@ -601,15 +678,16 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   if (genreRoute) return <GenreDirectoryPage key={genreRoute} name={genreRoute} onBack={backFromGenre} onViewArtist={openArtistSongs} />;
+  if (sectionRoute) return <SiteSectionPage key={sectionRoute} section={sectionRoute} chart={chart} globalChart={globalChart} onNavigate={navigateSection} onGenre={openGenrePage} onSearch={searchFromSection} onOpenSong={(item) => { setSectionRoute(""); window.history.pushState({}, "", "/"); openLyrics(item); }} onAccount={() => { navigateSection("home"); setAuthMode("login"); setProfileOpen(true); }} onSupport={() => { navigateSection("home"); setSupportOpen(true); }} />;
 
   return <div className={lyrics ? "portal portal--song-open" : "portal"}>
     <div className="portal-topline"><span><Sparkles size={13}/> Descubra a história por trás de cada música</span><span className="portal-topline__right">Música conecta pessoas</span></div>
-    {lyrics && <header className="reference-site-header"><div className="reference-site-header__top"><Brand onClick={backToPortal}/><form className="reference-header-search" onSubmit={(event)=>{event.preventDefault();backToPortal();if(query.trim())search(query,1);}}><Search size={19}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar por música, artista ou trecho da letra..."/><button aria-label="Buscar"><Search size={18}/></button></form><div className="reference-quick-actions"><button onClick={()=>{setAuthMode("login");setProfileOpen(true);}}><UserRound size={15}/> Entrar</button><button className="reference-yellow" onClick={()=>setProfileOpen(true)}>Meus Dados</button></div></div><nav className="reference-site-nav"><a href="#inicio" onClick={backToPortal}><Home size={15}/> Início</a><a href="#busca" onClick={backToPortal}><Music2 size={15}/> Letras</a><a href="#artistas" onClick={backToPortal}><UserRound size={15}/> Artistas</a><a href="#destaques" onClick={backToPortal}><Disc3 size={15}/> Álbuns</a><a href="#generos" onClick={backToPortal}><ListMusic size={15}/> Playlists</a><a href="#destaques" onClick={backToPortal}><Music2 size={15}/> Em Alta</a><a href="#generos" onClick={backToPortal}>Gêneros⌄</a><button onClick={()=>setSupportOpen(true)}><Headphones size={16}/> Suporte</button></nav></header>}
+    {lyrics && <header className="reference-site-header"><div className="reference-site-header__top"><Brand onClick={backToPortal}/><form className="reference-header-search" onSubmit={(event)=>{event.preventDefault();backToPortal();if(query.trim())search(query,1);}}><Search size={19}/><input value={query} onChange={event=>setQuery(event.target.value)} placeholder="Buscar por música, artista ou trecho da letra..."/><button aria-label="Buscar"><Search size={18}/></button></form><div className="reference-quick-actions"><button onClick={()=>{setAuthMode("login");setProfileOpen(true);}}><UserRound size={15}/> Entrar</button><button className="reference-yellow" onClick={()=>setProfileOpen(true)}>Meus Dados</button></div></div><nav className="reference-site-nav"><a href="/" onClick={(e)=>{e.preventDefault();navigateSection("home");}}><Home size={15}/> Início</a><a href="/letras" onClick={(e)=>{e.preventDefault();navigateSection("letras");}}><Music2 size={15}/> Letras</a><a href="/artistas" onClick={(e)=>{e.preventDefault();navigateSection("artistas");}}><UserRound size={15}/> Artistas</a><a href="/albuns" onClick={(e)=>{e.preventDefault();navigateSection("albuns");}}><Disc3 size={15}/> Álbuns</a><a href="/playlists" onClick={(e)=>{e.preventDefault();navigateSection("playlists");}}><ListMusic size={15}/> Playlists</a><a href="/em-alta" onClick={(e)=>{e.preventDefault();navigateSection("em-alta");}}><Music2 size={15}/> Em Alta</a><a href="/generos" onClick={(e)=>{e.preventDefault();navigateSection("generos");}}>Gêneros⌄</a><button onClick={()=>{navigateSection("home");setSupportOpen(true);}}><Headphones size={16}/> Suporte</button></nav></header>}
     <header className="portal-header">
-      <a className="portal-brand" href="#inicio" aria-label="Site Músicas início"><span className="portal-brand__mark"><Music2 size={24} fill="currentColor"/></span><span>Site <span className="portal-brand__yellow">Músicas</span><small className="portal-brand__tagline">LETRAS QUE TOCAM VOCÊ</small></span></a>
+      <a className="portal-brand" href="/" onClick={(e) => { e.preventDefault(); navigateSection("home"); }} aria-label="Site Músicas início"><span className="portal-brand__mark"><Music2 size={24} fill="currentColor"/></span><span>Site <span className="portal-brand__yellow">Músicas</span><small className="portal-brand__tagline">LETRAS QUE TOCAM VOCÊ</small></span></a>
       <form className="portal-search portal-header-search" onSubmit={(e) => { e.preventDefault(); search(query, 1); }}><Search size={19}/><input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar por música, artista ou trecho da letra..." aria-label="Buscar por música, artista ou trecho da letra"/><button disabled={loading} aria-label="Pesquisar"><Search size={18}/></button></form>
       <div className="portal-header-actions"><button className="portal-login-link" onClick={() => {setAuthMode("login");setProfileOpen(true);}}><UserRound size={14}/> Entrar</button><button className="portal-account-button" onClick={() => setProfileOpen(true)}>{account ? account.name.split(" ")[0] : "Meus Dados"}</button><button className="portal-mobile-menu" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">{mobileOpen ? <X/> : <Menu/>}</button></div>
-      <nav className={mobileOpen ? "portal-nav portal-nav--open" : "portal-nav"}><a href="#inicio" onClick={() => setMobileOpen(false)}><Home size={15}/> Início</a><a href="#busca" onClick={() => setMobileOpen(false)}><Music2 size={15}/> Letras</a><a href="#artistas" onClick={() => setMobileOpen(false)}><UserRound size={15}/> Artistas</a><a href="#generos" onClick={() => setMobileOpen(false)}><Disc3 size={15}/> Álbuns</a><a href="#generos" onClick={() => setMobileOpen(false)}><ListMusic size={15}/> Playlists</a><a href="#destaques" onClick={() => setMobileOpen(false)}><Music2 size={15}/> Em Alta</a><a href="#generos" onClick={() => setMobileOpen(false)}>Gêneros⌄</a><button onClick={() => { setSupportOpen(true); setMobileOpen(false); }}><Headphones size={15}/> Suporte</button></nav>
+      <nav className={mobileOpen ? "portal-nav portal-nav--open" : "portal-nav"}><a href="/" onClick={(e) => { e.preventDefault(); navigateSection("home"); }}><Home size={15}/> Início</a><a href="/letras" onClick={(e) => { e.preventDefault(); navigateSection("letras"); }}><Music2 size={15}/> Letras</a><a href="/artistas" onClick={(e) => { e.preventDefault(); navigateSection("artistas"); }}><UserRound size={15}/> Artistas</a><a href="/albuns" onClick={(e) => { e.preventDefault(); navigateSection("albuns"); }}><Disc3 size={15}/> Álbuns</a><a href="/playlists" onClick={(e) => { e.preventDefault(); navigateSection("playlists"); }}><ListMusic size={15}/> Playlists</a><a href="/em-alta" onClick={(e) => { e.preventDefault(); navigateSection("em-alta"); }}><Music2 size={15}/> Em Alta</a><a href="/generos" onClick={(e) => { e.preventDefault(); navigateSection("generos"); }}>Gêneros⌄</a><button onClick={() => { setSupportOpen(true); setMobileOpen(false); }}><Headphones size={15}/> Suporte</button></nav>
     </header>
 
     <main id="inicio">
