@@ -302,7 +302,7 @@ const server = http.createServer(async (req, res) => {
     // Try a community Cifra Club JSON adapter first. It is unofficial and may become unavailable.
     // Only display a returned chord sheet when the endpoint actually supplies chord content.
     if (!chord) {
-      const slug = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+      const slug = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase().replace(/&/g, " e ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
       try {
         const sourceUrl = new URL("https://cifraclub-api.vercel.app/api/cifra");
@@ -351,9 +351,22 @@ const server = http.createServer(async (req, res) => {
         if (response.ok) {
           const payload = await response.json();
           const items = Array.isArray(payload) ? payload : Array.isArray(payload?.songs) ? payload.songs : [];
-          externalMatches = items.slice(0, 5).map((item) => {
+          const normalizeMatch = (value) => key(value).split(" ").filter(Boolean);
+          const titleTokens = normalizeMatch(title);
+          const artistTokens = normalizeMatch(artist);
+          const scored = items.map((item) => {
             const resultTitle = String(item.title || item.name || "Faixa sem título").slice(0, 200);
             const resultArtist = String(item.artist?.name || item.artistName || item.artist || "Artista não informado").slice(0, 160);
+            const resultTitleTokens = normalizeMatch(resultTitle);
+            const resultArtistTokens = normalizeMatch(resultArtist);
+            const titleOverlap = titleTokens.filter((token) => resultTitleTokens.includes(token)).length / Math.max(1, titleTokens.length);
+            const artistOverlap = artistTokens.filter((token) => resultArtistTokens.includes(token)).length / Math.max(1, artistTokens.length);
+            const exactTitle = key(resultTitle) === key(title);
+            const exactArtist = key(resultArtist) === key(artist);
+            return { item, resultTitle, resultArtist, score: (exactTitle ? 3 : titleOverlap) + (exactArtist ? 2 : artistOverlap), titleOverlap, artistOverlap };
+          }).filter((match) => match.titleOverlap >= 0.6 && match.artistOverlap >= 0.3)
+            .sort((a, b) => b.score - a.score).slice(0, 5);
+          externalMatches = scored.map(({ item, resultTitle, resultArtist }) => {
             const tracks = Array.isArray(item.tracks) ? item.tracks.map((track) => String(track.instrument || track.name || "")).filter(Boolean).slice(0, 8) : [];
             return { title: resultTitle, artist: resultArtist, instrumentTracks: tracks,
               url: "https://www.songsterr.com/?pattern=" + encodeURIComponent(resultTitle + " " + resultArtist), provider: "Songsterr" };
