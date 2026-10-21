@@ -510,15 +510,18 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   const genreArtists = useMemo(() => {
-    const pool = [...results, ...chart, ...globalChart];
+    const pool = activePage === "genre" ? results : [...results, ...chart, ...globalChart];
     const unique = [];
     for (const item of pool) {
       const name = item.artist || item.artistName;
       if (name && !unique.some((artist) => normalize(artist.name) === normalize(name))) unique.push({ name, artworkUrl: item.artworkUrl || item.artworkUrl100 });
     }
     return unique.slice(0, 24);
-  }, [results, chart, globalChart]);
+  }, [results, chart, globalChart, activePage]);
   const pageTitle = ({ lyrics: "Letras", artists: "Artistas", albums: "Álbuns", playlists: "Playlists", trending: "Em Alta", genre: activeGenre })[activePage] || "Site Músicas";
+  useEffect(() => {
+    if (activePage === "genre" && activeGenre && !results.length && !loading) search(activeGenre, 1);
+  }, [activePage, activeGenre]);
   useEffect(() => {
     const syncPage = () => { const params = new URLSearchParams(window.location.search); setActivePage(params.get("pagina") || "home"); if (params.get("genero")) setActiveGenre(params.get("genero")); };
     window.addEventListener("popstate", syncPage);
