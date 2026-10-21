@@ -119,6 +119,8 @@ export default function App() {
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [genre, setGenre] = useState("Todos");
   const [genrePage, setGenrePage] = useState("");
+  const [genreArtists, setGenreArtists] = useState([]);
+  const [genreArtistsLoading, setGenreArtistsLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [chart, setChart] = useState([]);
   const [globalChart, setGlobalChart] = useState([]);
@@ -398,22 +400,21 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
-  const genreArtistList = useMemo(() => {
-    const seen = new Set();
-    return results.filter((item) => {
-      const artist = String(item.artist || item.artistName || "").trim();
-      const key = normalize(artist);
-      if (!artist || !key || seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    }).map((item) => ({ ...item, title: item.artist || item.artistName, artist: "Artista", artistPage: true }));
-  }, [results]);
-  const openGenrePage = (name) => {
-    setGenre(name);
-    setGenrePage(name);
-    setQuery(name);
-    search(name, 1);
+  const openGenrePage = async (name) => {
+    setGenre(name); setGenrePage(name); setQuery(name); setSubmittedQuery(name);
+    setResults([]); setGenreArtists([]); setGenreArtistsLoading(true);
+    setMessage(`Carregando cantores e bandas de ${name}...`); setSource(""); setHasMore(false); setPage(1);
     window.history.pushState({ genre: name }, "", `?genero=${encodeURIComponent(name)}`);
+    document.getElementById("busca-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    try {
+      const response = await fetch(`/api/genre-artists?genre=${encodeURIComponent(name)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível carregar os artistas.");
+      setGenreArtists(Array.isArray(data.items) ? data.items : []);
+      setSource(data.source || "Catálogo de artistas");
+      setMessage(data.items?.length ? `${data.items.length} artistas encontrados no gênero ${name}.` : (data.note || `Ainda não encontramos artistas para ${name}.`));
+    } catch (error) { setGenreArtists([]); setMessage(error.message || "Falha ao carregar artistas. Tente novamente."); }
+    finally { setGenreArtistsLoading(false); }
   };
   const backToPortal = () => { window.history.replaceState({}, "", window.location.pathname); setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); };
   const shareCurrentSong = async () => { try { if (navigator.share) await navigator.share({title:lyrics?.title || "Site Músicas", text:`${lyrics?.title || ""} — ${lyrics?.artist || ""}`, url:window.location.href}); else if (navigator.clipboard) await navigator.clipboard.writeText(window.location.href); } catch {} };
@@ -537,7 +538,13 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
       </section>
 
       {submittedQuery && <section className="portal-results portal-section" id="busca-resultados"><div className="portal-section-heading"><div><span className="portal-kicker">PESQUISA MUSICAL</span><h2>{genrePage && normalize(genrePage) === normalize(submittedQuery) ? <>Artistas de <em>{genrePage}</em></> : <>Resultados para <em>“{submittedQuery}”</em></>}</h2><p>{message || "Buscando no catálogo musical..."}</p>{source && <small>Fonte consultada: {source}</small>}</div><button className="portal-text-button" onClick={() => { setSubmittedQuery(""); setResults([]); setMessage(""); }}>Limpar pesquisa <X size={15}/></button></div>
-        {results.length > 0 ? <><div className="portal-result-list">{(genrePage && normalize(genrePage) === normalize(submittedQuery) ? genreArtistList : results).map((item, i) => <article className="portal-result" key={`${genrePage && normalize(genrePage) === normalize(submittedQuery) ? "artist" : "track"}-${item.id || item.title}-${i}`}><Cover item={item} index={i}/><div className="portal-result__info"><h3>{genrePage && normalize(genrePage) === normalize(submittedQuery) ? item.title : item.title}</h3><p>{genrePage && normalize(genrePage) === normalize(submittedQuery) ? `Artista do gênero ${genrePage}` : item.artist}</p><small>{genrePage && normalize(genrePage) === normalize(submittedQuery) ? `Explorar músicas de ${item.title}` : item.album || item.genre || "Faixa musical"}{!genrePage && item.releaseDate ? ` · ${String(item.releaseDate).slice(0,4)}` : ""}</small></div><button className="portal-icon-button" onClick={() => toggleSaved(item)} aria-label="Salvar música"><Heart size={18} fill={saved.some((x) => x.id === item.id) ? "currentColor" : "none"}/></button><button className="portal-result__open" onClick={() => { if (genrePage && normalize(genrePage) === normalize(submittedQuery)) { setGenrePage(""); setQuery(item.title); search(item.title,1); } else openLyrics(item); }}>{genrePage && normalize(genrePage) === normalize(submittedQuery) ? "Ver músicas" : "Ver letra"} <ChevronRight size={16}/></button></article>)}</div>{(page > 1 || hasMore) && <div className="portal-pagination"><button disabled={page <= 1 || loading} onClick={() => search(submittedQuery, page - 1)}>Anterior</button><span>Página {page}</span><button disabled={!hasMore || loading} onClick={() => search(submittedQuery, page + 1)}>Próxima <ArrowRight size={15}/></button></div>}</> : <div className="portal-empty"><Search size={25}/><strong>{loading ? "Pesquisando..." : "Nenhum resultado relevante"}</strong><p>{message}</p></div>}
+        {genrePage && normalize(genrePage) === normalize(submittedQuery) ? (
+          genreArtists.length ? <div className="portal-result-list portal-artist-list">{genreArtists.map((item, i) => <article className="portal-result portal-artist-result" key={item.id || item.name}>
+            <div className="portal-artist-avatar"><Cover item={item} index={i}/></div>
+            <div className="portal-result__info"><h3>{item.name || item.title}</h3><p>Cantor(a) ou banda · {genrePage}</p><small>{item.provider || "Catálogo de artistas"}{item.country ? ` · ${item.country}` : ""}</small></div>
+            <button className="portal-result__open" onClick={() => { setGenrePage(""); setQuery(item.name || item.title); search(item.name || item.title, 1); }}>Ver músicas <ChevronRight size={16}/></button>
+          </article>)}</div> : <div className="portal-empty"><Search size={25}/><strong>{genreArtistsLoading ? "Buscando cantores e bandas deste gênero..." : "Nenhum artista encontrado"}</strong><p>{message}</p></div>
+        ) : results.length > 0 ? <><div className="portal-result-list">{results.map((item, i) => <article className="portal-result" key={item.id || `${item.title}-${i}`}><Cover item={item} index={i}/><div className="portal-result__info"><h3>{item.title}</h3><p>{item.artist}</p><small>{item.album || item.genre || "Faixa musical"}{item.releaseDate ? ` · ${String(item.releaseDate).slice(0,4)}` : ""}</small></div><button className="portal-icon-button" onClick={() => toggleSaved(item)} aria-label="Salvar música"><Heart size={18} fill={saved.some((x) => x.id === item.id) ? "currentColor" : "none"}/></button><button className="portal-result__open" onClick={() => openLyrics(item)}>Ver letra <ChevronRight size={16}/></button></article>)}</div>{(page > 1 || hasMore) && <div className="portal-pagination"><button disabled={page <= 1 || loading} onClick={() => search(submittedQuery, page - 1)}>Anterior</button><span>Página {page}</span><button disabled={!hasMore || loading} onClick={() => search(submittedQuery, page + 1)}>Próxima <ArrowRight size={15}/></button></div>}</> : <div className="portal-empty"><Search size={25}/><strong>{loading ? "Pesquisando..." : "Nenhum resultado relevante"}</strong><p>{message}</p></div>}
       </section>}
 
       <section className="portal-home-grid" aria-label="Descubra músicas">
