@@ -316,6 +316,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     if (!pageLines.length) pageLines.push([""]);
     const streams = pageLines.map((lines, pageIndex) => {
       const commands = [];
+      commands.push("BT /F1 11 Tf 54 818 Td (" + pdfEscape("SITE MUSICAS - LETRAS QUE TOCAM VOCE") + ") Tj ET");
       commands.push("BT /F1 18 Tf 54 790 Td (" + pdfEscape(lyrics.title || "Letra") + ") Tj ET");
       commands.push("BT /F1 11 Tf 54 770 Td (" + pdfEscape(lyrics.artist || "Artista não informado") + ") Tj ET");
       commands.push("BT /F1 10 Tf 54 744 Td (" + pdfEscape(pageIndex ? "Letra (continuação)" : "Letra da música") + ") Tj ET");
