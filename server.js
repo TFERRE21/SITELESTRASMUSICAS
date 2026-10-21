@@ -418,56 +418,87 @@ const server = http.createServer(async (req, res) => {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
     const isGlobal = ["international", "global", "us"].includes(country);
     const countrySlug = isGlobal ? "worldwide" : "brazil";
+    const strip = (value) => value.replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+    let sourceError = "";
     try {
       const chartUrl = `https://chartex.com/charts/youtube/weekly/${countrySlug}`;
       const response = await fetch(chartUrl, {
         headers: { "User-Agent": "Mozilla/5.0 (compatible; SomELetra/1.0)", "Accept": "text/html" },
-        signal: AbortSignal.timeout(15000)
+        signal: AbortSignal.timeout(12000)
       });
-      if (!response.ok) throw new Error(`A fonte do ranking respondeu HTTP ${response.status}.`);
+      if (!response.ok) throw new Error(`A fonte principal respondeu HTTP ${response.status}.`);
       const html = await response.text();
       const decoded = html.replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ");
-      const titleText = decoded.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "";
-      const chartTitle = titleText.replace(/<[^>]+>/g, "").trim();
-      const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
-      const strip = (value) => value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+      const chartTitle = strip(decoded.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1] || "");
       const rows = [];
+      const rowRegex = /<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi;
       for (const rowMatch of decoded.matchAll(rowRegex)) {
-        const row = rowMatch[1];
-        const cellRegex = /<td\b[^>]*>([\s\S]*?)<\/td>/gi;
-        const cells = [...row.matchAll(cellRegex)].map((cell) => ({ html: cell[1], text: strip(cell[1]) }));
+        const cells = [...rowMatch[1].matchAll(/<td\\b[^>]*>([\\s\\S]*?)<\\/td>/gi)].map((cell) => ({ html: cell[1], text: strip(cell[1]) }));
         if (!cells.length) continue;
-        const rankCandidate = Number.parseInt(cells[0].text, 10);
-        if (!Number.isFinite(rankCandidate) || rankCandidate < 1 || rankCandidate > 500) continue;
-        const titleCell = cells.find((cell) => /href=["'][^"']*\/(songs|sounds)\//i.test(cell.html));
+        const rank = Number.parseInt(cells[0].text, 10);
+        if (!Number.isFinite(rank) || rank < 1 || rank > 500) continue;
+        const titleCell = cells.find((cell) => /href=["'][^"']*\\/(songs|sounds)\\//i.test(cell.html));
         if (!titleCell) continue;
-        const hrefMatch = titleCell.html.match(/href=["']([^"']+)["']/i);
-        const titleLinkText = titleCell.html.match(/<a\b[^>]*href=["'][^"']*\/(songs|sounds)\/[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-        if (!hrefMatch || !titleLinkText) continue;
-        const title = strip(titleLinkText[2]);
-        if (!title || title.length > 180 || rows.some((item) => item.rank === rankCandidate || item.title === title)) continue;
-        const artist = cells.slice(1).filter((cell) => cell.text && cell.text !== title).map((cell) => cell.text).find((text) => !/^[-–—]$/.test(text)) || "Ver artistas na fonte";
-        const imageMatch = titleCell.html.match(/<img\b[^>]*src=["']([^"']+)["']/i);
-        rows.push({
-          id: `ytchart-${countrySlug}-${rankCandidate}`, rank: rankCandidate, title, artist,
-          album: "", genre: "YouTube Top Songs", genres: [{ name: "YouTube Top Songs" }],
-          artworkUrl: imageMatch?.[1] || "",
-          url: hrefMatch[1].startsWith("http") ? hrefMatch[1] : `https://chartex.com${hrefMatch[1]}`,
-          country: isGlobal ? "Global" : "Brasil", source: "YouTube Top Songs via ChartEx",
-          updatedAt: new Date().toISOString()
-        });
+        const href = titleCell.html.match(/href=["']([^"']+)["']/i)?.[1];
+        const titleLink = titleCell.html.match(/<a\\b[^>]*href=["'][^"']*\\/(songs|sounds)\\/[^"']*["'][^>]*>([\\s\\S]*?)<\\/a>/i);
+        const title = titleLink ? strip(titleLink[2]) : "";
+        if (!href || !title || title.length > 180 || rows.some((item) => item.rank === rank)) continue;
+        const artist = cells.slice(1).map((cell) => cell.text).find((text) => text && text !== title && !/^[-–—]$/.test(text)) || "Ver artistas na fonte";
+        const image = titleCell.html.match(/<img\\b[^>]*src=["']([^"']+)["']/i)?.[1] || "";
+        rows.push({ id: `ytchart-${countrySlug}-${rank}`, rank, title, artist, album: "", genre: "YouTube Top Songs", genres: [{ name: "YouTube Top Songs" }], artworkUrl: image, url: href.startsWith("http") ? href : `https://chartex.com${href}`, country: isGlobal ? "Global" : "Brasil", source: "YouTube Top Songs via ChartEx", updatedAt: new Date().toISOString() });
       }
       rows.sort((a, b) => a.rank - b.rank);
-      const items = rows.slice(0, 10);
-      if (!items.length) throw new Error("A fonte não apresentou linhas de ranking reconhecíveis. Nenhuma lista alternativa será rotulada como ranking do YouTube.");
-      return json(res, 200, {
-        country: countrySlug, items, total: items.length,
-        updatedAt: new Date().toISOString(), source: "YouTube Top Songs via ChartEx",
-        sourceUrl: chartUrl, chartTitle,
-        note: "Ranking semanal do YouTube apresentado por um serviço terceiro."
-      });
+      if (rows.length) {
+        const items = rows.slice(0, 10);
+        return json(res, 200, { country: countrySlug, items, total: items.length, updatedAt: new Date().toISOString(), source: "YouTube Top Songs via ChartEx", sourceUrl: chartUrl, chartTitle, note: "Ranking semanal do YouTube apresentado por um serviço terceiro." });
+      }
+      sourceError = "A fonte principal não apresentou linhas reconhecíveis.";
     } catch (error) {
-      return json(res, 502, { error: error.message || "Não foi possível carregar o ranking do YouTube.", items: [], source: "YouTube Top Songs" });
+      sourceError = error.message || "Falha na fonte principal.";
+    }
+
+    // Fallback de catálogo: Apple Music RSS mantém a seção útil se o scraper do ranking estiver indisponível.
+    // A resposta é rotulada como lista de músicas populares, não como ranking oficial do YouTube.
+    try {
+      const storefront = isGlobal ? "us" : "br";
+      const fallbackUrl = `https://rss.applemarketingtools.com/api/v2/${storefront}/music/most-played/10/songs.json`;
+      const response = await fetch(fallbackUrl, {
+        headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+        signal: AbortSignal.timeout(10000)
+      });
+      if (!response.ok) throw new Error(`A fonte alternativa respondeu HTTP ${response.status}.`);
+      const payload = await response.json();
+      const results = Array.isArray(payload.feed?.results) ? payload.feed.results : [];
+      const items = results.map((track, index) => ({
+        id: `apple-popular-${storefront}-${track.id || index + 1}`,
+        rank: index + 1,
+        title: track.name || "Faixa sem título",
+        artist: track.artistName || "Artista não informado",
+        album: track.collectionName || "",
+        genre: track.genres?.[0]?.name || "Música",
+        genres: track.genres || [],
+        artworkUrl: track.artworkUrl100 || "",
+        url: track.url || "",
+        country: isGlobal ? "Global" : "Brasil",
+        source: "Apple Music Most Played",
+        updatedAt: new Date().toISOString()
+      }));
+      if (!items.length) throw new Error("A fonte alternativa não retornou músicas.");
+      return json(res, 200, {
+        country: storefront, items, total: items.length,
+        updatedAt: new Date().toISOString(),
+        source: "Apple Music Most Played",
+        sourceUrl: fallbackUrl,
+        note: "Lista alternativa de músicas populares da Apple Music. Não representa o ranking oficial do YouTube.",
+        fallback: true
+      });
+    } catch (fallbackError) {
+      return json(res, 502, {
+        error: "Não foi possível carregar as listas musicais agora. Tente novamente mais tarde.",
+        detail: sourceError,
+        fallbackError: fallbackError.message || "Falha na fonte alternativa.",
+        items: [], source: "music charts"
+      });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
