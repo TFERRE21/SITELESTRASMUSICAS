@@ -421,7 +421,7 @@ const server = http.createServer(async (req, res) => {
     // Search providers automatically when no complete chord content was returned.
     if (!chord) {
       const query = `${title} ${artist}`.slice(0, 180);
-      console.warn("[chords] nenhum conteúdo completo encontrado", JSON.stringify({ title, artist, instrument, providers: providerDiagnostics }));
+      console.info("[chords] provedores externos sem conteúdo; verificando referências internas", JSON.stringify({ title, artist, instrument, providers: providerDiagnostics }));
       const encodedQuery = encodeURIComponent(query);
       const providerLinks = [
         { title: "Cifra Club", artist, instrumentTracks: [instrument], url: `https://www.cifraclub.com.br/?q=${encodedQuery}`, provider: "Cifra Club" },
