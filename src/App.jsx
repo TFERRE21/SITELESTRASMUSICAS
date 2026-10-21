@@ -200,7 +200,7 @@ export default function App() {
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [genre, setGenre] = useState("Todos");
   const [genrePage, setGenrePage] = useState("");
-  const [genreRoute, setGenreRoute] = useState(() => { const match = window.location.pathname.match(/^\\/generos\\/([^/]+)/); return match ? genreFromSlug(decodeURIComponent(match[1])) : ""; });
+  const [genreRoute, setGenreRoute] = useState(() => { const match = window.location.pathname.match(/^\/generos\/([^/]+)/); return match ? genreFromSlug(decodeURIComponent(match[1])) : ""; });
   const [genreArtists, setGenreArtists] = useState([]);
   const [genreArtistsLoading, setGenreArtistsLoading] = useState(false);
   const [results, setResults] = useState([]);
@@ -422,7 +422,7 @@ export default function App() {
 
   useEffect(() => {
     const openFromAddress = () => {
-      const routeMatch = window.location.pathname.match(/^\\/generos\\/([^/]+)/);
+      const routeMatch = window.location.pathname.match(/^\/generos\/([^/]+)/);
       const routeGenre = routeMatch ? genreFromSlug(decodeURIComponent(routeMatch[1])) : "";
       setGenreRoute(routeGenre);
       if (routeGenre) { setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); return; }
