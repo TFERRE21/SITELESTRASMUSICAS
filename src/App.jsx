@@ -21,8 +21,55 @@ function Brand({ onClick }) {
 }
 
 function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, onPrint, onDownload, onShare, onVideo, onListen, autoplayVideo, onNextTrack, nextTrackLoading, onSave, saved, catalog, onOpen, fontScale, setFontScale, account, comments, commentsLoading, commentText, setCommentText, onSubmitComment, commentError, commentNotice, audioRef, isPreviewPlaying, previewTime, previewDuration, onSeekPreview }) {
-  const artistItems = catalog.filter((item) => normalize(item.artist) === normalize(lyrics.artist) && normalize(item.title) !== normalize(lyrics.title)).slice(0, 5);
-  const relatedItems = catalog.filter((item) => normalize(item.title) !== normalize(lyrics.title) && normalize(item.artist) !== normalize(lyrics.artist) && (lyrics.genre ? normalize(item.genre || item.genres?.[0]?.name).includes(normalize(lyrics.genre)) : true)).slice(0, 5);
+  const [artistItems, setArtistItems] = useState([]);
+  const [relatedItems, setRelatedItems] = useState([]);
+  const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const run = async () => {
+      setRecommendationsLoading(true);
+      const norm = (value) => normalize(value).replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+      const request = async (term) => {
+        if (!term) return [];
+        const response = await fetch(`/api/music-search?q=${encodeURIComponent(term)}&page=1`);
+        const raw = await response.text();
+        let data;
+        try { data = JSON.parse(raw); } catch { return []; }
+        return response.ok && Array.isArray(data.items) ? data.items : [];
+      };
+      try {
+        const artistQuery = await request(lyrics.artist);
+        const sameArtist = [...catalog, ...artistQuery].filter((item) =>
+          norm(item.artist) === norm(lyrics.artist) &&
+          norm(item.title) !== norm(lyrics.title)
+        ).filter((item, index, list) => list.findIndex((x) => norm(x.title) === norm(item.title) && norm(x.artist) === norm(item.artist)) === index).slice(0, 6);
+        const genreName = lyrics.genre || "";
+        const isGospel = /gospel|relig|christ|crist|louvor|adora/i.test(genreName) || /gospel|louvor|adora/i.test(`${lyrics.title} ${lyrics.artist}`);
+        const genreQueries = isGospel ? ["Gospel", "Christian & Gospel", "louvor gospel"] :
+          genreName ? [genreName, `música ${genreName}`] : ["músicas populares Brasil"];
+        const relatedLists = await Promise.all(genreQueries.map(request));
+        const relatedPool = [...catalog, ...relatedLists.flat()].filter((item) =>
+          norm(item.title) !== norm(lyrics.title) &&
+          norm(item.artist) !== norm(lyrics.artist)
+        );
+        const genreMatches = relatedPool.filter((item) => {
+          const tags = norm([item.genre, ...(item.genres || []).map((g) => typeof g === "string" ? g : g.name), item.title, item.artist, item.album].filter(Boolean).join(" "));
+          return isGospel ? /gospel|christian|relig|louvor|adora|worship|evangel/i.test(tags) :
+            genreName ? tags.includes(norm(genreName)) : true;
+        });
+        const picks = (genreMatches.length ? genreMatches : relatedPool).filter((item, index, list) =>
+          list.findIndex((x) => norm(x.title) === norm(item.title) && norm(x.artist) === norm(item.artist)) === index
+        ).slice(0, 8);
+        if (!cancelled) { setArtistItems(sameArtist); setRelatedItems(picks); }
+      } catch {
+        if (!cancelled) { setArtistItems([]); setRelatedItems([]); }
+      } finally {
+        if (!cancelled) setRecommendationsLoading(false);
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [lyrics.id, lyrics.title, lyrics.artist, lyrics.genre, catalog]);
   const hasLyrics = Boolean(lyrics.text && !/^(carregando letra|letra indisponível|letra não encontrada|não foi possível carregar)/i.test(lyrics.text.trim()));
   const youtubeUrl = video ? "https://www.youtube.com/watch?v=" + encodeURIComponent(video.videoId) : "https://www.youtube.com/results?search_query=" + encodeURIComponent(lyrics.title + " " + lyrics.artist);
   return <main className="reference-song-page">
@@ -56,8 +103,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
         </div>
       </div>
       <aside className="reference-song-sidebar">
-        <section className="reference-related-card"><h2>Mais de {lyrics.artist}</h2>{artistItems.length ? artistItems.map((item,i)=><button key={item.id || item.title} onClick={()=>onOpen(item)}><Cover item={item} index={i}/><span><strong>{item.title}</strong><small>{item.artist}</small></span><ChevronRight size={14}/></button>) : <p>Não há outras músicas desse artista no catálogo disponível.</p>}</section>
-        <section className="reference-related-card"><h2>Músicas relacionadas</h2>{relatedItems.length ? relatedItems.map((item,i)=><button key={item.id || item.title} onClick={()=>onOpen(item)}><Cover item={item} index={i}/><span><strong>{item.title}</strong><small>{item.artist}</small></span><ChevronRight size={14}/></button>) : <p>Não há recomendações correspondentes no catálogo disponível.</p>}</section>
+        {(artistItems.length > 0 || recommendationsLoading) && <section className="reference-related-card"><h2>Mais de {lyrics.artist}</h2>{artistItems.map((item,i)=><button key={item.id || item.title} onClick={()=>onOpen(item)}><Cover item={item} index={i}/><span><strong>{item.title}</strong><small>{item.artist}</small></span><ChevronRight size={14}/></button>)}{recommendationsLoading && !artistItems.length && <p>Buscando outras músicas deste artista…</p>}</section>}
+        {(relatedItems.length > 0 || recommendationsLoading) && <section className="reference-related-card"><h2>{/gospel|relig|christ|crist|louvor|adora/i.test(lyrics.genre || "") ? "Mais artistas gospel" : `Mais de ${lyrics.genre || "este estilo"}`}</h2>{relatedItems.map((item,i)=><button key={item.id || item.title} onClick={()=>onOpen(item)}><Cover item={item} index={i}/><span><strong>{item.title}</strong><small>{item.artist}</small></span><ChevronRight size={14}/></button>)}{recommendationsLoading && !relatedItems.length && <p>Buscando músicas e artistas relacionados…</p>}</section>}
       </aside>
     </div>
     <section className="reference-comments-card">
