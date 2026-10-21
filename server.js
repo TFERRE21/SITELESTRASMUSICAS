@@ -393,7 +393,6 @@ const server = http.createServer(async (req, res) => {
       ["Jazz", ["João Gilberto","Hermeto Pascoal","Eliane Elias","Baden Powell","Azimuth","Leny Andrade","Hamilton de Holanda","João Donato","Dori Caymmi","Moacir Santos"]],
       ["Música Latina", ["Daniela Mercury","Ivete Sangalo","Anitta","Claudia Leitte","Ludmilla","Pabllo Vittar","Carlinhos Brown","Margareth Menezes","Alinne Rosa","Bell Marques"]]
     ];
-    const normalizeArtist = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     const unique = new Map();
     for (const [genre, names] of catalog) {
       for (const name of names) {
