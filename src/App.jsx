@@ -296,33 +296,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           setChordCatalogMessage("Cifra carregada do catálogo do Som & Letra.");
         } else {
           setChordInput("");
-          setChordCatalogStatus("loading");
-          setChordCatalogMessage("Nenhuma cifra no catálogo. Tentando gerar uma sugestão automaticamente...");
-          try {
-            const generatedResponse = await fetch("/api/chords/generate", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title: lyrics.title, artist: lyrics.artist, instrument })
-            });
-            const generatedData = await generatedResponse.json();
-            if (cancelled) return;
-            if (!generatedResponse.ok) {
-              if (generatedResponse.status === 503) {
-                setChordCatalogStatus("empty");
-                setChordCatalogMessage("Não há cifra cadastrada e a geração automática ainda precisa ser ativada no servidor.");
-              } else {
-                throw new Error(generatedData.error || "Não foi possível gerar uma sugestão automática.");
-              }
-            } else {
-              setChordInput(generatedData.chord?.content || "");
-              setChordCatalogStatus("found");
-              setChordCatalogMessage("Sugestão harmônica gerada automaticamente por IA e salva no catálogo. Não é uma cifra oficial; confira os acordes.");
-            }
-          } catch (generationError) {
-            if (cancelled) return;
-            setChordCatalogStatus("empty");
-            setChordCatalogMessage(generationError.message || "Não há cifra cadastrada e a geração automática falhou.");
-          }
+          setChordCatalogStatus("empty");
+          setChordCatalogMessage("Ainda não há cifra cadastrada para esta música. Use “Buscar cifras grátis” para pesquisar na internet; depois, cole os acordes aqui e salve no catálogo.");
         }
         setTransposeBy(0);
       })
@@ -334,27 +309,11 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
     return () => { cancelled = true; };
   }, [songView, lyrics?.title, lyrics?.artist, instrument]);
 
-  const generateChordSuggestion = async () => {
-    setGeneratingChord(true);
-    setChordCatalogMessage("");
-    try {
-      const response = await fetch("/api/chords/generate", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: lyrics.title, artist: lyrics.artist, instrument })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Não foi possível gerar uma sugestão de cifra.");
-      setChordInput(data.chord.content || "");
-      setTransposeBy(0);
-      setChordCatalogStatus("found");
-      setChordCatalogMessage("Sugestão de acordes gerada por IA e salva no catálogo interno. Confira antes de tocar.");
-    } catch (error) {
-      setChordCatalogStatus("error");
-      setChordCatalogMessage(error.message || "Não foi possível gerar uma sugestão de cifra.");
-    } finally {
-      setGeneratingChord(false);
-    }
+  const generateChordSuggestion = () => {
+    const query = encodeURIComponent(`${lyrics?.title || ""} ${lyrics?.artist || ""} cifra acordes`);
+    window.open(`https://www.google.com/search?q=${query}`, "_blank", "noopener,noreferrer");
+    setChordCatalogStatus("empty");
+    setChordCatalogMessage("Busca gratuita aberta em outra aba. Confira a fonte, copie somente os acordes que puder utilizar e cole no editor para salvar no catálogo.");
   };
 
   const publishChordToCatalog = async () => {
@@ -460,8 +419,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
               </div>
               <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
               <div className="reference-chords-editor">
-                <button type="button" className="reference-chords-generate" onClick={generateChordSuggestion} disabled={generatingChord}>{generatingChord ? "Gerando sugestão..." : "Gerar sugestão de acordes com IA"}</button>
-                <small className="reference-chords-ai-note">A IA cria uma sugestão harmônica, não uma transcrição oficial. Confira os acordes antes de usar.</small>
+                <button type="button" className="reference-chords-generate" onClick={generateChordSuggestion}>Buscar cifras grátis</button>
+                <small className="reference-chords-ai-note">Pesquisa gratuita, sem API paga. Quando encontrar os acordes, cole no campo abaixo e salve no catálogo do site.</small>
                 <label htmlFor="chord-input">Se já tiver os acordes, cole aqui</label>
                 <textarea id="chord-input" value={chordInput} onChange={(event) => { setChordInput(event.target.value); setTransposeBy(0); }} placeholder={"Ex.: Am  F  C  G\nCole aqui a sequência de acordes ou a cifra com a letra."} rows={4}/>
                 <div className="reference-chords-tools">
