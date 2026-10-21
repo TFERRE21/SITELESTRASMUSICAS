@@ -178,7 +178,7 @@ function SiteSectionPage({ section, chart, globalChart, onNavigate, onGenre, onS
     const name = item.artist || item.artistName;
     if (name && !artists.some((artist) => normalize(artist.name) === normalize(name))) artists.push({ name, artworkUrl: item.artworkUrl || item.artworkUrl100, item });
   }
-  const allArtists = artistCatalog.length ? artistCatalog : artists;
+  const allArtists = section === "artistas" ? artistCatalog : artists;
   const filteredArtists = allArtists.filter((artist) => normalize(artist.name).includes(normalize(term)));
   const albums = [];
   for (const item of [...chart, ...globalChart]) {
