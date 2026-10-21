@@ -260,6 +260,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [chordCatalogStatus, setChordCatalogStatus] = useState("idle");
   const [chordCatalogMessage, setChordCatalogMessage] = useState("");
   const [externalChordMatches, setExternalChordMatches] = useState([]);
+  const uniqueExternalChordMatches = [...new Map(externalChordMatches.filter((match) => match?.url && match?.title).map((match) => [normalize(`${match.title} ${match.artist || ""} ${(match.instrumentTracks || []).join(" ")}`), match])).values()].slice(0, 5);
   const songsterrSearchUrl = `https://www.songsterr.com/a/wa/bestMatchForQueryStringPart?s=${encodeURIComponent((lyrics?.title || "") + " " + (lyrics?.artist || ""))}`;
   const [savingChord, setSavingChord] = useState(false);
   const [generatingChord, setGeneratingChord] = useState(false);
@@ -443,9 +444,9 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
               </div>
               <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
               <section className="reference-chords-external" aria-label="Referências de tablaturas">
-                <h3>{externalChordMatches.length ? "Referências encontradas" : "Pesquisar referências gratuitas"}</h3>
-                <p>{externalChordMatches.length ? "Resultados do catálogo Songsterr. A fonte abre seu reprodutor; nem sempre fornece a cifra completa dentro do Site Músicas." : "Não apareceu uma cifra completa no catálogo interno. Você ainda pode pesquisar tablaturas correspondentes sem sair desta página primeiro."}</p>
-                {externalChordMatches.length > 0 && <div className="reference-chords-external-list">{externalChordMatches.map((match, index) => <article key={match.url + index}>
+                <h3>{uniqueExternalChordMatches.length ? "Referências encontradas" : "Pesquisar referências gratuitas"}</h3>
+                <p>{uniqueExternalChordMatches.length ? "Encontramos opções externas relacionadas. Confira o nome e o artista antes de abrir; essas referências não garantem que a cifra completa esteja disponível aqui." : "Ainda não há cifra completa no catálogo interno. Você pode pesquisar referências gratuitas ou cadastrar uma cifra que tenha autorização para publicar."}</p>
+                {uniqueExternalChordMatches.length > 0 && <div className="reference-chords-external-list">{uniqueExternalChordMatches.map((match, index) => <article key={match.url + index}>
                   <div><strong>{match.title}</strong><span>{match.artist}</span>{match.instrumentTracks?.length > 0 && <small>Instrumentos: {match.instrumentTracks.join(", ")}</small>}</div>
                   <a href={match.url} target="_blank" rel="noreferrer">Abrir referência <ArrowRight size={14}/></a>
                 </article>)}</div>}
