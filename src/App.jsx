@@ -581,7 +581,7 @@ export default function App() {
   const [genre, setGenre] = useState("Todos");
   const [genrePage, setGenrePage] = useState("");
   const [genreRoute, setGenreRoute] = useState(() => { const match = window.location.pathname.match(/^\/generos\/([^/]+)/); return match ? genreFromSlug(decodeURIComponent(match[1])) : ""; });
-  const [sectionRoute, setSectionRoute] = useState(() => { const path = window.location.pathname.split("/").filter(Boolean)[0] || ""; return ["letras","artistas","albuns","playlists","em-alta","generos"].includes(path) ? path : ""; });
+  const [sectionRoute, setSectionRoute] = useState(() => { const path = window.location.pathname.split("/").filter(Boolean)[0] || ""; return ["letras","artistas","albuns","playlists","em-alta","generos","loja"].includes(path) ? path : ""; });
   const [genreArtists, setGenreArtists] = useState([]);
   const [genreArtistsLoading, setGenreArtistsLoading] = useState(false);
   const [results, setResults] = useState([]);
