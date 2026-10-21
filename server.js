@@ -299,12 +299,44 @@ const server = http.createServer(async (req, res) => {
         (key(item.title).includes(titleKey) || titleKey.includes(key(item.title))) &&
         (key(item.artist).includes(artistKey) || artistKey.includes(key(item.artist)))) || null;
     let externalMatches = [];
-    // Search providers automatically. Public search APIs may return metadata, not licensed raw chord sheets.
-    // Keep direct, query-specific links rather than pretending a search result is a full chord sheet.
+    // Try a community Cifra Club JSON adapter first. It is unofficial and may become unavailable.
+    // Only display a returned chord sheet when the endpoint actually supplies chord content.
+    if (!chord) {
+      const slug = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+        .toLowerCase().replace(/&/g, " e ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
+      try {
+        const sourceUrl = new URL("https://cifraclub-api.vercel.app/api/cifra");
+        sourceUrl.searchParams.set("artist", slug(artist));
+        sourceUrl.searchParams.set("song", slug(title));
+        const response = await fetch(sourceUrl, {
+          headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+          signal: AbortSignal.timeout(9000)
+        });
+        if (response.ok) {
+          const payload = await response.json();
+          const raw = payload?.cifra ?? payload?.chords ?? payload?.content ?? payload?.tabs;
+          const content = Array.isArray(raw) ? raw.map((line) => String(line ?? "")).join("\\n") : typeof raw === "string" ? raw : "";
+          const returnedTitle = String(payload?.name || payload?.title || title).slice(0, 200);
+          const returnedArtist = String(payload?.artist || artist).slice(0, 160);
+          if (content.trim() && content.length <= 30000) {
+            chord = {
+              id: "cifraclub-api-" + slug(returnedArtist) + "-" + slug(returnedTitle),
+              title: returnedTitle,
+              artist: returnedArtist,
+              instrument,
+              content: content.trim(),
+              source: "Cifra Club (adaptador comunitário)",
+              sourceUrl: payload?.cifraclub_url || payload?.url || "https://www.cifraclub.com.br/" + slug(returnedArtist) + "/" + slug(returnedTitle) + "/",
+              updatedAt: new Date().toISOString()
+            };
+          }
+        }
+      } catch { /* Continue with other sources if the unofficial adapter is unavailable. */ }
+    }
+    // Search providers automatically when no complete chord content was returned.
     if (!chord) {
       const query = `${title} ${artist}`.slice(0, 180);
-      const encodedQuery = encodeURIComponent(query);
-      const providerLinks = [
+      const encodedQuery = encodeURIComponent(query);      const providerLinks = [
         { title: "Cifra Club", artist, instrumentTracks: [instrument], url: `https://www.cifraclub.com.br/?q=${encodedQuery}`, provider: "Cifra Club" },
         { title: "Ultimate Guitar", artist, instrumentTracks: [instrument], url: `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodedQuery}`, provider: "Ultimate Guitar" },
         { title: "Songsterr", artist, instrumentTracks: [instrument], url: `https://www.songsterr.com/?pattern=${encodedQuery}`, provider: "Songsterr" },
