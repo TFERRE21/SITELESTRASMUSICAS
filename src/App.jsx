@@ -260,6 +260,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [chordCatalogStatus, setChordCatalogStatus] = useState("idle");
   const [chordCatalogMessage, setChordCatalogMessage] = useState("");
   const [externalChordMatches, setExternalChordMatches] = useState([]);
+  const songsterrSearchUrl = `https://www.songsterr.com/a/wa/bestMatchForQueryStringPart?s=${encodeURIComponent((lyrics?.title || "") + " " + (lyrics?.artist || ""))}`;
   const [savingChord, setSavingChord] = useState(false);
   const [generatingChord, setGeneratingChord] = useState(false);
   const chordNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
@@ -301,7 +302,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           setChordCatalogStatus("empty");
           setChordCatalogMessage(data.externalMatches?.length
             ? "Não há cifra completa cadastrada ainda, mas encontramos referências de tablaturas para esta música."
-            : "Ainda não há cifra cadastrada. Você pode contribuir salvando os acordes abaixo quando os tiver.");
+            : "Não encontramos uma cifra completa no catálogo interno. Veja as referências abaixo ou salve uma cifra confiável para esta música.");
         }
         setTransposeBy(0);
       })
@@ -331,7 +332,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
         setChordCatalogStatus("empty");
         setChordCatalogMessage(data.externalMatches?.length
           ? "Encontramos referências de tablaturas; a cifra completa ainda não está no catálogo interno."
-          : "Ainda não temos acordes cadastrados para esta música. Você pode contribuir salvando uma cifra.");
+          : "Ainda não há cifra completa cadastrada. Use a referência abaixo ou salve uma cifra confiável.");
       }
     } catch (error) {
       setChordCatalogStatus("error");
@@ -441,14 +442,15 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
                 {["Violão","Guitarra","Teclado","Piano","Baixo","Bateria","Ukulele"].map((item) => <button type="button" key={item} className={instrument === item ? "is-active" : ""} onClick={() => setInstrument(item)}>{item === "Violão" ? "🎸" : item === "Guitarra" ? "🎸" : item === "Teclado" ? "🎹" : item === "Piano" ? "🎹" : item === "Baixo" ? "🎸" : item === "Bateria" ? "🥁" : "🪕"} <span>{item}</span></button>)}
               </div>
               <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
-              {externalChordMatches.length > 0 && <section className="reference-chords-external" aria-label="Referências de tablaturas encontradas">
-                <h3>Referências encontradas</h3>
-                <p>Resultados gratuitos do Songsterr. Eles abrem o reprodutor da fonte; não são cifras completas hospedadas no Site Músicas.</p>
-                <div className="reference-chords-external-list">{externalChordMatches.map((match, index) => <article key={match.url + index}>
+              <section className="reference-chords-external" aria-label="Referências de tablaturas">
+                <h3>{externalChordMatches.length ? "Referências encontradas" : "Pesquisar referências gratuitas"}</h3>
+                <p>{externalChordMatches.length ? "Resultados do catálogo Songsterr. A fonte abre seu reprodutor; nem sempre fornece a cifra completa dentro do Site Músicas." : "Não apareceu uma cifra completa no catálogo interno. Você ainda pode pesquisar tablaturas correspondentes sem sair desta página primeiro."}</p>
+                {externalChordMatches.length > 0 && <div className="reference-chords-external-list">{externalChordMatches.map((match, index) => <article key={match.url + index}>
                   <div><strong>{match.title}</strong><span>{match.artist}</span>{match.instrumentTracks?.length > 0 && <small>Instrumentos: {match.instrumentTracks.join(", ")}</small>}</div>
                   <a href={match.url} target="_blank" rel="noreferrer">Abrir referência <ArrowRight size={14}/></a>
-                </article>)}</div>
-              </section>}
+                </article>)}</div>}
+                <a className="reference-chords-external-search" href={songsterrSearchUrl} target="_blank" rel="noreferrer">Buscar “{lyrics.title}” no Songsterr <ArrowRight size={14}/></a>
+              </section>
               <div className="reference-chords-editor">
                 <button type="button" className="reference-chords-generate" onClick={generateChordSuggestion}>Consultar catálogo do site</button>
                 <small className="reference-chords-ai-note">As cifras disponíveis são exibidas aqui no site. Você pode editar os acordes e salvá-los no catálogo interno.</small>
