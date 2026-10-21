@@ -348,7 +348,7 @@ const server = http.createServer(async (req, res) => {
   if (req.method === "GET" && url.pathname === "/api/genre-artists") {
     const genre = (url.searchParams.get("genre") || "").trim().slice(0, 80);
     if (!genre) return json(res, 400, { error: "Informe o gênero musical.", items: [] });
-    const norm = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+        const norm = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     const key = norm(genre);
     const aliases = {
       gospel: ["gospel", "christian", "louvor", "adoração"], sertanejo: ["sertanejo", "sertanejo brasileiro"],
