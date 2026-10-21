@@ -418,7 +418,7 @@ const server = http.createServer(async (req, res) => {
     const country = (url.searchParams.get("country") || "br").toLowerCase();
     const isGlobal = ["international", "global", "us"].includes(country);
     const countrySlug = isGlobal ? "worldwide" : "brazil";
-    const strip = (value) => value.replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+    const strip = (value) => value.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
     let sourceError = "";
     try {
       const chartUrl = `https://chartex.com/charts/youtube/weekly/${countrySlug}`;
@@ -429,22 +429,22 @@ const server = http.createServer(async (req, res) => {
       if (!response.ok) throw new Error(`A fonte principal respondeu HTTP ${response.status}.`);
       const html = await response.text();
       const decoded = html.replace(/&amp;/g, "&").replace(/&#x27;|&#39;/g, "'").replace(/&quot;/g, '"').replace(/&nbsp;/g, " ");
-      const chartTitle = strip(decoded.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1] || "");
+      const chartTitle = strip(decoded.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || "");
       const rows = [];
-      const rowRegex = /<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi;
+      const rowRegex = /<tr\b[^>]*>([\s\S]*?)<\/tr>/gi;
       for (const rowMatch of decoded.matchAll(rowRegex)) {
-        const cells = [...rowMatch[1].matchAll(/<td\\b[^>]*>([\\s\\S]*?)<\\/td>/gi)].map((cell) => ({ html: cell[1], text: strip(cell[1]) }));
+        const cells = [...rowMatch[1].matchAll(/<td\b[^>]*>([\s\S]*?)<\/td>/gi)].map((cell) => ({ html: cell[1], text: strip(cell[1]) }));
         if (!cells.length) continue;
         const rank = Number.parseInt(cells[0].text, 10);
         if (!Number.isFinite(rank) || rank < 1 || rank > 500) continue;
-        const titleCell = cells.find((cell) => /href=["'][^"']*\\/(songs|sounds)\\//i.test(cell.html));
+        const titleCell = cells.find((cell) => /href=["'][^"']*\/(songs|sounds)\//i.test(cell.html));
         if (!titleCell) continue;
         const href = titleCell.html.match(/href=["']([^"']+)["']/i)?.[1];
-        const titleLink = titleCell.html.match(/<a\\b[^>]*href=["'][^"']*\\/(songs|sounds)\\/[^"']*["'][^>]*>([\\s\\S]*?)<\\/a>/i);
+        const titleLink = titleCell.html.match(/<a\b[^>]*href=["'][^"']*\/(songs|sounds)\/[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
         const title = titleLink ? strip(titleLink[2]) : "";
         if (!href || !title || title.length > 180 || rows.some((item) => item.rank === rank)) continue;
         const artist = cells.slice(1).map((cell) => cell.text).find((text) => text && text !== title && !/^[-–—]$/.test(text)) || "Ver artistas na fonte";
-        const image = titleCell.html.match(/<img\\b[^>]*src=["']([^"']+)["']/i)?.[1] || "";
+        const image = titleCell.html.match(/<img\b[^>]*src=["']([^"']+)["']/i)?.[1] || "";
         rows.push({ id: `ytchart-${countrySlug}-${rank}`, rank, title, artist, album: "", genre: "YouTube Top Songs", genres: [{ name: "YouTube Top Songs" }], artworkUrl: image, url: href.startsWith("http") ? href : `https://chartex.com${href}`, country: isGlobal ? "Global" : "Brasil", source: "YouTube Top Songs via ChartEx", updatedAt: new Date().toISOString() });
       }
       rows.sort((a, b) => a.rank - b.rank);
