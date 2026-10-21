@@ -299,39 +299,62 @@ const server = http.createServer(async (req, res) => {
         (key(item.title).includes(titleKey) || titleKey.includes(key(item.title))) &&
         (key(item.artist).includes(artistKey) || artistKey.includes(key(item.artist)))) || null;
     let externalMatches = [];
-    // Try a community Cifra Club JSON adapter first. It is unofficial and may become unavailable.
-    // Only display a returned chord sheet when the endpoint actually supplies chord content.
+    // Try the community Cifra Club adapter with slug and original-text variants.
+    // This adapter is unofficial; accept only actual chord text and reject unrelated results.
     if (!chord) {
-      const slug = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+      const slug = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
         .toLowerCase().replace(/&/g, " e ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
-      try {
-        const sourceUrl = new URL("https://cifraclub-api.vercel.app/api/cifra");
-        sourceUrl.searchParams.set("artist", slug(artist));
-        sourceUrl.searchParams.set("song", slug(title));
-        const response = await fetch(sourceUrl, {
-          headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
-          signal: AbortSignal.timeout(9000)
-        });
-        if (response.ok) {
+      const candidates = [
+        { artist: slug(artist), song: slug(title) },
+        { artist: artist.trim(), song: title.trim() },
+        { artist: slug(artist), song: title.trim() },
+        { artist: artist.trim(), song: slug(title) }
+      ];
+      const tried = new Set();
+      for (const candidate of candidates) {
+        const candidateKey = candidate.artist + "|" + candidate.song;
+        if (tried.has(candidateKey)) continue;
+        tried.add(candidateKey);
+        try {
+          const sourceUrl = new URL("https://cifraclub-api.vercel.app/api/cifra");
+          sourceUrl.searchParams.set("artist", candidate.artist);
+          sourceUrl.searchParams.set("song", candidate.song);
+          const response = await fetch(sourceUrl, {
+            headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+            signal: AbortSignal.timeout(7000)
+          });
+          if (!response.ok) continue;
           const payload = await response.json();
-          const raw = payload?.cifra ?? payload?.chords ?? payload?.content ?? payload?.tabs;
-          const content = Array.isArray(raw) ? raw.map((line) => String(line ?? "")).join("\n") : typeof raw === "string" ? raw : "";
-          const returnedTitle = String(payload?.name || payload?.title || title).slice(0, 200);
-          const returnedArtist = String(payload?.artist || artist).slice(0, 160);
-          if (content.trim() && content.length <= 30000) {
-            chord = {
-              id: "cifraclub-api-" + slug(returnedArtist) + "-" + slug(returnedTitle),
-              title: returnedTitle,
-              artist: returnedArtist,
-              instrument,
-              content: content.trim(),
-              source: "Cifra Club (adaptador comunitário)",
-              sourceUrl: payload?.cifraclub_url || payload?.url || "https://www.cifraclub.com.br/" + slug(returnedArtist) + "/" + slug(returnedTitle) + "/",
-              updatedAt: new Date().toISOString()
-            };
+          const records = [payload, payload?.data, payload?.result, payload?.cifraData].filter(Boolean);
+          let matched = null;
+          for (const record of records) {
+            const raw = record?.cifra ?? record?.chords ?? record?.content ?? record?.tabs ?? record?.lyrics;
+            const content = Array.isArray(raw) ? raw.map((line) => {
+              if (typeof line === "string") return line;
+              if (line && typeof line === "object") return [line.chord, line.text, line.lyric].filter(Boolean).join(" ");
+              return "";
+            }).join("\\n") : typeof raw === "string" ? raw : "";
+            const returnedTitle = String(record?.name || record?.title || title).slice(0, 200);
+            const returnedArtist = String(record?.artist?.name || record?.artist || artist).slice(0, 160);
+            const titleMatch = key(returnedTitle) === titleKey || key(returnedTitle).includes(titleKey) || titleKey.includes(key(returnedTitle));
+            const artistMatch = key(returnedArtist) === artistKey || key(returnedArtist).includes(artistKey) || artistKey.includes(key(returnedArtist));
+            if (content.trim() && content.length <= 30000 && titleMatch && artistMatch) {
+              matched = {
+                id: "cifraclub-api-" + slug(returnedArtist) + "-" + slug(returnedTitle),
+                title: returnedTitle,
+                artist: returnedArtist,
+                instrument,
+                content: content.trim(),
+                source: "Cifra Club (adaptador comunitário)",
+                sourceUrl: record?.cifraclub_url || record?.url || "https://www.cifraclub.com.br/" + slug(returnedArtist) + "/" + slug(returnedTitle) + "/",
+                updatedAt: new Date().toISOString()
+              };
+              break;
+            }
           }
-        }
-      } catch { /* Continue with other sources if the unofficial adapter is unavailable. */ }
+          if (matched) { chord = matched; break; }
+        } catch { /* Try another query variant before falling back to external sources. */ }
+      }
     }
     // Search providers automatically when no complete chord content was returned.
     if (!chord) {
