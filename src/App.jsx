@@ -589,6 +589,9 @@ export default function App() {
   const [globalChart, setGlobalChart] = useState([]);
   const [chartSource, setChartSource] = useState("");
   const [chartNote, setChartNote] = useState("");
+  const [chartLoading, setChartLoading] = useState(true);
+  const [chartError, setChartError] = useState("");
+  const [chartReloadKey, setChartReloadKey] = useState(0);
   const [country, setCountry] = useState("br");
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -660,20 +663,33 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    Promise.all([
-      fetch("/api/charts?country=br").then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Ranking Brasil indisponível."); return data; }),
-      fetch("/api/charts?country=us").then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Ranking global indisponível."); return data; })
-    ]).then(([br, global]) => {
+    setChartLoading(true);
+    setChartError("");
+    const loadOne = async (region) => {
+      const response = await fetch("/api/charts?country=" + region, { headers: { Accept: "application/json" } });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "A fonte musical está temporariamente indisponível.");
+      if (!Array.isArray(data.items) || !data.items.length) throw new Error("A fonte não retornou músicas.");
+      return data;
+    };
+    Promise.allSettled([loadOne("br"), loadOne("us")]).then((settled) => {
       if (!active) return;
-      setChart(Array.isArray(br.items) ? br.items : []);
-      setGlobalChart(Array.isArray(global.items) ? global.items : []);
-      setChartSource([br.source, global.source].filter(Boolean).join(" · "));
-      setChartNote(br.note || global.note || "");
+      const [brResult, globalResult] = settled;
+      const br = brResult.status === "fulfilled" ? brResult.value : null;
+      const global = globalResult.status === "fulfilled" ? globalResult.value : null;
+      setChart(br ? br.items : []);
+      setGlobalChart(global ? global.items : []);
+      setChartSource([br?.source, global?.source].filter(Boolean).join(" · "));
+      setChartNote(br?.note || global?.note || "");
+      const errors = [];
+      if (!br) errors.push("Brasil: " + (brResult.reason?.message || "não foi possível carregar."));
+      if (!global) errors.push("Global: " + (globalResult.reason?.message || "não foi possível carregar."));
+      setChartError(errors.join(" "));
     }).catch(() => {
-      if (active) { setChart([]); setGlobalChart([]); setChartSource(""); setChartNote(""); }
-    });
+      if (active) setChartError("Não foi possível consultar as listas musicais agora.");
+    }).finally(() => { if (active) setChartLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [chartReloadKey]);
 
   const search = async (term, nextPage = 1) => {
     const clean = term.trim();
@@ -1083,9 +1099,10 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
           <section className="portal-ranking-panel" id="destaques">
             <div className="portal-section-heading"><div><span className="portal-kicker">RANKINGS MUSICAIS</span><h2>Em alta agora.</h2><p>Top 10 por região, com base nas atualizações identificadas.</p></div><div className="portal-tabs"><span className="active">🇧🇷 Brasil</span><span>🌐 Global</span></div></div>
             <p className="portal-chart-source"><span className="portal-chart-source__info">ⓘ</span> {chartNote || "Os dados refletem a popularidade da fonte musical consultada e podem ter atualizações periódicas."}{chartSource ? <span className="portal-chart-source__name">Fonte: {chartSource}</span> : null}</p>
+            {chartError && <div className="portal-chart-retry" role="status"><span>{chartError}</span><button type="button" onClick={() => setChartReloadKey((key) => key + 1)} disabled={chartLoading}>{chartLoading ? "Carregando..." : "Tentar novamente"}</button></div>}
             <div className="portal-ranking-columns">
-              <section className="portal-ranking-country"><h3>Top 10 Brasil</h3>{visibleChart.length ? <div className="portal-ranking-list">{visibleChart.map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{i+1}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><span className="portal-ranking-trend" aria-label="posição no ranking">↑</span></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={18}/><span>Ranking Brasil indisponível no momento.</span></div>}</section>
-              <section className="portal-ranking-country"><h3>Top 10 Global</h3>{visibleGlobalChart.length ? <div className="portal-ranking-list">{visibleGlobalChart.map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{i+1}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i+5}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><span className="portal-ranking-trend" aria-label="posição no ranking">↑</span></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={18}/><span>Ranking global indisponível no momento.</span></div>}</section>
+              <section className="portal-ranking-country"><h3>Top 10 Brasil</h3>{visibleChart.length ? <div className="portal-ranking-list">{visibleChart.map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{i+1}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><span className="portal-ranking-trend" aria-label="posição no ranking">↑</span></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={18}/><span>{chartLoading ? "Carregando músicas populares do Brasil..." : "Lista musical indisponível no momento."}</span></div>}</section>
+              <section className="portal-ranking-country"><h3>Top 10 Global</h3>{visibleGlobalChart.length ? <div className="portal-ranking-list">{visibleGlobalChart.map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{i+1}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i+5}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><span className="portal-ranking-trend" aria-label="posição no ranking">↑</span></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={18}/><span>{chartLoading ? "Carregando músicas populares globais..." : "Lista musical indisponível no momento."}</span></div>}</section>
             </div>
           </section>
         </div>
