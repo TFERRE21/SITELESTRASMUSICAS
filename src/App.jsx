@@ -118,6 +118,9 @@ export default function App() {
   const [query, setQuery] = useState("");
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [genre, setGenre] = useState("Todos");
+  const [genrePage, setGenrePage] = useState("");
+  const [genreArtists, setGenreArtists] = useState([]);
+  const [genreArtistsLoading, setGenreArtistsLoading] = useState(false);
   const [results, setResults] = useState([]);
   const [chart, setChart] = useState([]);
   const [globalChart, setGlobalChart] = useState([]);
@@ -397,6 +400,22 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
+  const openGenrePage = async (name) => {
+    setGenre(name); setGenrePage(name); setQuery(name); setSubmittedQuery(name);
+    setResults([]); setGenreArtists([]); setGenreArtistsLoading(true);
+    setMessage(`Carregando cantores e bandas de ${name}...`); setSource(""); setHasMore(false); setPage(1);
+    window.history.pushState({ genre: name }, "", `?genero=${encodeURIComponent(name)}`);
+    document.getElementById("busca-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    try {
+      const response = await fetch(`/api/genre-artists?genre=${encodeURIComponent(name)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível carregar os artistas.");
+      setGenreArtists(Array.isArray(data.items) ? data.items : []);
+      setSource(data.source || "Catálogo de artistas");
+      setMessage(data.items?.length ? `${data.items.length} artistas encontrados no gênero ${name}.` : (data.note || `Ainda não encontramos artistas para ${name}.`));
+    } catch (error) { setGenreArtists([]); setMessage(error.message || "Falha ao carregar artistas. Tente novamente."); }
+    finally { setGenreArtistsLoading(false); }
+  };
   const backToPortal = () => { window.history.replaceState({}, "", window.location.pathname); setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); };
   const shareCurrentSong = async () => { try { if (navigator.share) await navigator.share({title:lyrics?.title || "Site Músicas", text:`${lyrics?.title || ""} — ${lyrics?.artist || ""}`, url:window.location.href}); else if (navigator.clipboard) await navigator.clipboard.writeText(window.location.href); } catch {} };
   const saveCurrentSong = () => { if (lyrics?.id) toggleSaved({...lyrics, id:lyrics.id, title:lyrics.title, artist:lyrics.artist}); else setMessage("Pesquise esta música no catálogo para adicioná-la aos favoritos."); };
@@ -518,8 +537,14 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
         <div className="portal-hero__floating portal-hero__floating--two"><Heart size={18}/><span>Guarde suas<br/>músicas favoritas</span></div>
       </section>
 
-      {submittedQuery && <section className="portal-results portal-section" id="busca-resultados"><div className="portal-section-heading"><div><span className="portal-kicker">PESQUISA MUSICAL</span><h2>Resultados para <em>“{submittedQuery}”</em></h2><p>{message || "Buscando no catálogo musical..."}</p>{source && <small>Fonte consultada: {source}</small>}</div><button className="portal-text-button" onClick={() => { setSubmittedQuery(""); setResults([]); setMessage(""); }}>Limpar pesquisa <X size={15}/></button></div>
-        {results.length > 0 ? <><div className="portal-result-list">{results.map((item, i) => <article className="portal-result" key={item.id || `${item.title}-${i}`}><Cover item={item} index={i}/><div className="portal-result__info"><h3>{item.title}</h3><p>{item.artist}</p><small>{item.album || item.genre || "Faixa musical"}{item.releaseDate ? ` · ${String(item.releaseDate).slice(0,4)}` : ""}</small></div><button className="portal-icon-button" onClick={() => toggleSaved(item)} aria-label="Salvar música"><Heart size={18} fill={saved.some((x) => x.id === item.id) ? "currentColor" : "none"}/></button><button className="portal-result__open" onClick={() => openLyrics(item)}>Ver letra <ChevronRight size={16}/></button></article>)}</div>{(page > 1 || hasMore) && <div className="portal-pagination"><button disabled={page <= 1 || loading} onClick={() => search(submittedQuery, page - 1)}>Anterior</button><span>Página {page}</span><button disabled={!hasMore || loading} onClick={() => search(submittedQuery, page + 1)}>Próxima <ArrowRight size={15}/></button></div>}</> : <div className="portal-empty"><Search size={25}/><strong>{loading ? "Pesquisando..." : "Nenhum resultado relevante"}</strong><p>{message}</p></div>}
+      {submittedQuery && <section className="portal-results portal-section" id="busca-resultados"><div className="portal-section-heading"><div><span className="portal-kicker">PESQUISA MUSICAL</span><h2>{genrePage && normalize(genrePage) === normalize(submittedQuery) ? <>Artistas de <em>{genrePage}</em></> : <>Resultados para <em>“{submittedQuery}”</em></>}</h2><p>{message || "Buscando no catálogo musical..."}</p>{source && <small>Fonte consultada: {source}</small>}</div><button className="portal-text-button" onClick={() => { setSubmittedQuery(""); setResults([]); setMessage(""); }}>Limpar pesquisa <X size={15}/></button></div>
+        {genrePage && normalize(genrePage) === normalize(submittedQuery) ? (
+          genreArtists.length ? <div className="portal-result-list portal-artist-list">{genreArtists.map((item, i) => <article className="portal-result portal-artist-result" key={item.id || item.name}>
+            <div className="portal-artist-avatar"><Cover item={item} index={i}/></div>
+            <div className="portal-result__info"><h3>{item.name || item.title}</h3><p>Cantor(a) ou banda · {genrePage}</p><small>{item.provider || "Catálogo de artistas"}{item.country ? ` · ${item.country}` : ""}</small></div>
+            <button className="portal-result__open" onClick={() => { setGenrePage(""); setQuery(item.name || item.title); search(item.name || item.title, 1); }}>Ver músicas <ChevronRight size={16}/></button>
+          </article>)}</div> : <div className="portal-empty"><Search size={25}/><strong>{genreArtistsLoading ? "Buscando cantores e bandas deste gênero..." : "Nenhum artista encontrado"}</strong><p>{message}</p></div>
+        ) : results.length > 0 ? <><div className="portal-result-list">{results.map((item, i) => <article className="portal-result" key={item.id || `${item.title}-${i}`}><Cover item={item} index={i}/><div className="portal-result__info"><h3>{item.title}</h3><p>{item.artist}</p><small>{item.album || item.genre || "Faixa musical"}{item.releaseDate ? ` · ${String(item.releaseDate).slice(0,4)}` : ""}</small></div><button className="portal-icon-button" onClick={() => toggleSaved(item)} aria-label="Salvar música"><Heart size={18} fill={saved.some((x) => x.id === item.id) ? "currentColor" : "none"}/></button><button className="portal-result__open" onClick={() => openLyrics(item)}>Ver letra <ChevronRight size={16}/></button></article>)}</div>{(page > 1 || hasMore) && <div className="portal-pagination"><button disabled={page <= 1 || loading} onClick={() => search(submittedQuery, page - 1)}>Anterior</button><span>Página {page}</span><button disabled={!hasMore || loading} onClick={() => search(submittedQuery, page + 1)}>Próxima <ArrowRight size={15}/></button></div>}</> : <div className="portal-empty"><Search size={25}/><strong>{loading ? "Pesquisando..." : "Nenhum resultado relevante"}</strong><p>{message}</p></div>}
       </section>}
 
       <section className="portal-home-grid" aria-label="Descubra músicas">
@@ -549,7 +574,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
           </section>
         </aside>
       </section>
-      <section className="portal-genres portal-genres--compact portal-genres--reference" id="generos"><div className="portal-section-heading"><div><h2>Principais gêneros musicais</h2></div><button className="portal-text-button" onClick={()=>document.querySelector(".portal-hero .portal-search input")?.focus()}>Ver todos <ArrowRight size={14}/></button></div><div className="portal-genre-grid">{["Gospel","Sertanejo","MPB","Pop","Rock","Rap","Funk","Pagode","Samba","Forró"].map((g,i)=><button key={g} className={`portal-genre portal-genre--reference portal-genre--tile-${i}`} onClick={()=>{setGenre(g);setQuery(g);search(g,1);}}><span className={`portal-genre__icon portal-genre__icon--${i%6}`}>{i===0?"✝":i===1?"♧":i===2?"♫":i===3?"☆":i===4?"♆":i===5?"♬":i===6?"♛":i===7?"◉":i===8?"▤":"▥"}</span><span>{g}</span></button>)}</div></section>
+      <section className="portal-genres portal-genres--compact portal-genres--reference" id="generos"><div className="portal-section-heading"><div><h2>Principais gêneros musicais</h2></div><button className="portal-text-button" onClick={()=>document.querySelector(".portal-hero .portal-search input")?.focus()}>Ver todos <ArrowRight size={14}/></button></div><div className="portal-genre-grid">{["Gospel","Sertanejo","MPB","Pop","Rock","Rap","Funk","Pagode","Samba","Forró"].map((g,i)=><button key={g} className={`portal-genre portal-genre--reference portal-genre--tile-${i}`} onClick={()=>openGenrePage(g)}><span className={`portal-genre__icon portal-genre__icon--${i%6}`}>{i===0?"✝":i===1?"♧":i===2?"♫":i===3?"☆":i===4?"♆":i===5?"♬":i===6?"♛":i===7?"◉":i===8?"▤":"▥"}</span><span>{g}</span></button>)}</div></section>
     </main>
     <footer className="portal-footer reference-footer"><div className="reference-footer__grid"><div className="reference-footer__brand"><a className="portal-brand" href="#inicio"><span className="portal-brand__mark"><Music2 size={25} fill="currentColor"/></span><span>Site <span className="portal-brand__yellow">Músicas</span><small className="portal-brand__tagline">LETRAS QUE TOCAM VOCÊ</small></span></a><p>Descubra as músicas que fazem parte da sua história.</p></div><div><h3>Navegação</h3><nav><a href="#inicio">Início</a><a href="#busca">Letras</a><a href="#artistas">Artistas</a><a href="#generos">Álbuns e playlists</a><a href="#destaques">Em Alta</a></nav></div><div><h3>Suporte</h3><nav><a href="#ajuda" onClick={(e)=>{e.preventDefault();setSupportOpen(true);}}>Ajuda</a><a href="#ajuda" onClick={(e)=>{e.preventDefault();setSupportOpen(true);}}>Fale Conosco</a><a href="#termos">Termos de Uso</a><a href="#privacidade">Política de Privacidade</a></nav></div><div><h3>Siga-nos</h3><div className="reference-social-links"><a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube/></a><a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram">◎</a><a href="https://www.facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook">f</a><a href="https://www.tiktok.com/" target="_blank" rel="noreferrer" aria-label="TikTok">♪</a></div></div><div><h3>Receba novidades</h3><form className="reference-newsletter" onSubmit={(e)=>{e.preventDefault();setNewsletterNotice("Cadastro ainda não ativado: falta configurar um serviço de envio de e-mails.");}}><input type="email" required placeholder="Seu e-mail" aria-label="Seu e-mail"/><button>Cadastro</button></form>{newsletterNotice && <small className="reference-newsletter-notice">{newsletterNotice}</small>}</div></div><div className="portal-footer__bottom"><span>© {new Date().getFullYear()} Site Músicas. Todos os direitos reservados.</span><span>Dados e letras exibidos conforme disponibilidade das fontes e autorizações aplicáveis.</span></div></footer>
 
