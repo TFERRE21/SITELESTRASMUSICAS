@@ -1291,3 +1291,8 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 .portal-legal-panel .portal-kicker{font-size:10px;letter-spacing:.14em}
 .portal-legal-close{display:inline-flex;align-items:center;justify-content:center;margin-top:22px;min-height:44px;padding:0 22px;border:0;border-radius:10px;background:#ffdb00;color:#17152b;font-weight:850;cursor:pointer}
 @media(max-width:600px){.portal-legal-panel{padding:22px 18px}.portal-legal-panel h3{margin-top:18px}}
+
+.portal-chart-retry{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0 16px;padding:11px 13px;border:1px solid #e7e2f5;border-radius:10px;background:#fff;color:#746c89;font-size:11px;line-height:1.5}
+.portal-chart-retry button{flex-shrink:0;min-height:34px;padding:0 12px;border:0;border-radius:8px;background:#ffdb00;color:#15172a;font-size:11px;font-weight:850;cursor:pointer}
+.portal-chart-retry button:disabled{opacity:.6;cursor:wait}
+@media(max-width:560px){.portal-chart-retry{align-items:flex-start;flex-direction:column}.portal-chart-retry button{width:100%}}
