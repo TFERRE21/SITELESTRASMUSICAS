@@ -299,9 +299,11 @@ const server = http.createServer(async (req, res) => {
         (key(item.title).includes(titleKey) || titleKey.includes(key(item.title))) &&
         (key(item.artist).includes(artistKey) || artistKey.includes(key(item.artist)))) || null;
     let externalMatches = [];
+    const providerDiagnostics = { local: chord ? "found" : "empty", cifraClub: "not_tried", ultimateGuitar: "not_tried", songsterr: "not_tried" };
     // Try the community Cifra Club adapter with slug and original-text variants.
     // This adapter is unofficial; accept only actual chord text and reject unrelated results.
     if (!chord) {
+      providerDiagnostics.cifraClub = "no_match";
       const slug = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase().replace(/&/g, " e ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
       const candidates = [
@@ -352,13 +354,14 @@ const server = http.createServer(async (req, res) => {
               break;
             }
           }
-          if (matched) { chord = matched; break; }
-        } catch { /* Try another query variant before falling back to external sources. */ }
+          if (matched) { chord = matched; providerDiagnostics.cifraClub = "found"; break; }
+        } catch (error) { providerDiagnostics.cifraClub = "error: " + String(error?.message || error).slice(0, 120); /* Try another query variant before falling back to external sources. */ }
       }
     }
     // Second content provider: Ultimate Guitar community scraper package.
     // It is best-effort because the upstream website can block requests or change its format.
     if (!chord) {
+      providerDiagnostics.ultimateGuitar = "no_match";
       try {
         const ugModule = await import("ultimate-guitar");
         const guitarFactory = ugModule.guitar || ugModule.default?.guitar;
@@ -370,6 +373,7 @@ const server = http.createServer(async (req, res) => {
             new Promise((_, reject) => setTimeout(() => reject(new Error("Ultimate Guitar search timeout")), 9000))
           ]);
           const results = Array.isArray(result?.responses) ? result.responses : [];
+          providerDiagnostics.ultimateGuitar = results.length ? "search_results:" + results.length : "no_search_results";
           const slugUG = (value) => key(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100);
           const titleTokens = key(title).split(" ").filter(Boolean);
           const artistTokens = key(artist).split(" ").filter(Boolean);
@@ -406,16 +410,18 @@ const server = http.createServer(async (req, res) => {
                   sourceUrl: candidate.tab_url || candidate.url || "https://www.ultimate-guitar.com/",
                   updatedAt: new Date().toISOString()
                 };
+                providerDiagnostics.ultimateGuitar = "found";
                 break;
               }
-            } catch { /* Try the next matching Ultimate Guitar entry. */ }
+            } catch (error) { providerDiagnostics.ultimateGuitar = "detail_error: " + String(error?.message || error).slice(0, 120); /* Try the next matching Ultimate Guitar entry. */ }
           }
         }
-      } catch { /* Keep the Cifra Club and external search fallbacks available. */ }
+      } catch (error) { providerDiagnostics.ultimateGuitar = "error: " + String(error?.message || error).slice(0, 120); /* Keep the Cifra Club and external search fallbacks available. */ }
     }
     // Search providers automatically when no complete chord content was returned.
     if (!chord) {
       const query = `${title} ${artist}`.slice(0, 180);
+      console.warn("[chords] nenhum conteúdo completo encontrado", JSON.stringify({ title, artist, instrument, providers: providerDiagnostics }));
       const encodedQuery = encodeURIComponent(query);
       const providerLinks = [
         { title: "Cifra Club", artist, instrumentTracks: [instrument], url: `https://www.cifraclub.com.br/?q=${encodedQuery}`, provider: "Cifra Club" },
@@ -430,6 +436,7 @@ const server = http.createServer(async (req, res) => {
         });
         if (response.ok) {
           const payload = await response.json();
+          providerDiagnostics.songsterr = "response_received";
           const items = Array.isArray(payload) ? payload : Array.isArray(payload?.songs) ? payload.songs : [];
           const normalizeMatch = (value) => key(value).split(" ").filter(Boolean);
           const titleTokens = normalizeMatch(title);
@@ -451,8 +458,9 @@ const server = http.createServer(async (req, res) => {
             return { title: resultTitle, artist: resultArtist, instrumentTracks: tracks,
               url: "https://www.songsterr.com/?pattern=" + encodeURIComponent(resultTitle + " " + resultArtist), provider: "Songsterr" };
           });
-        }
-      } catch { /* Provider links below remain available if the API is offline. */ }
+          providerDiagnostics.songsterr = "matches:" + externalMatches.length;
+        } else { providerDiagnostics.songsterr = "http_" + response.status; }
+      } catch (error) { providerDiagnostics.songsterr = "error: " + String(error?.message || error).slice(0, 120); /* Provider links below remain available if the API is offline. */ }
       const seenUrls = new Set(externalMatches.map((item) => item.url));
       externalMatches.push(...providerLinks.filter((item) => !seenUrls.has(item.url)));
     }
@@ -548,7 +556,7 @@ const server = http.createServer(async (req, res) => {
         updatedAt: "2026-10-21T00:00:00.000Z"
       };
     }
-    return json(res, 200, { chord, externalMatches, total: chords.length + (chord?.source === "catalogo-interno-referencia" ? 1 : 0) });
+    return json(res, 200, { chord, externalMatches, diagnostics: providerDiagnostics, total: chords.length + (chord?.source === "catalogo-interno-referencia" ? 1 : 0) });
   }
   if (url.pathname === "/api/chords" && req.method === "POST") {
     try {
