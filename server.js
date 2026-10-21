@@ -243,7 +243,7 @@ const server = http.createServer(async (req, res) => {
     const title = String(url.searchParams.get("title") || "").trim().slice(0, 200);
     const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
     if (!title || !artist) return json(res, 400, { error: "Informe a música e o artista." });
-    const key = (value) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/\\s+/g, " ").trim();
+    const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/\s+/g, " ").trim();
     const all = await readJsonFile(commentsFile, []);
     const comments = all.filter((item) => key(item.title) === key(title) && key(item.artist) === key(artist)).slice(0, 100);
     return json(res, 200, { comments, total: comments.length });
