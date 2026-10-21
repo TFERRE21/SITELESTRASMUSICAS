@@ -296,30 +296,81 @@ const server = http.createServer(async (req, res) => {
     const normalizedTitle = key(title);
     const normalizedArtist = key(artist);
     if (!chord && (normalizedTitle.includes("ah jesus") || normalizedTitle.includes("coracao igual ao teu"))) {
-      const chordSections = [
-        "AH, JESUS / CORAÇÃO IGUAL AO TEU — Julliany Souza",
-        "Tom de referência: G (Sol maior). Arranjo simplificado para estudo; confirme com a gravação.",
-        "",
-        "INTRODUÇÃO", "C  G/B  Am7", "",
-        "ESTROFE — progressão sugerida", "G  D/F#  Em  C", "G  D/F#  Em  C", "",
-        "PRÉ-REFRÃO — progressão sugerida", "Am  Em  C  D", "",
-        "REFRÃO — progressão sugerida", "G  G/B  C  D", "G  G/B  C  D",
-        "Bm  Em  Bm  Em", "Am  G/B  C  D  G", "",
-        "FINAL / INTERLÚDIO", "C  G/B  Am7"
-      ];
-      const instrumentParts = {
-        "Violão": ["INSTRUMENTO: VIOLÃO", "Sugestão de batida para estudo: ↓ ↓↑ ↑↓↑; ajuste ao andamento da gravação.", "Formas sugeridas: G (320003), D/F# (200232), Em (022000), C (x32010), Am (x02210), G/B (x20033), D (xx0232), Bm (x24432), Am7 (x02010)."],
-        "Guitarra": ["INSTRUMENTO: GUITARRA", "Use timbre limpo ou arpejos e ajuste efeitos/dinâmica conforme a gravação.", "Base harmônica: G | D/F# | Em | C · Am | Em | C | D · G | G/B | C | D."],
-        "Teclado": ["INSTRUMENTO: TECLADO", "Voicings sugeridos (mão direita): G = B-D-G; D/F# = A-D-F#; Em = G-B-E; C = G-C-E; Am = A-C-E; D = A-D-F#.", "Mão esquerda: fundamentais G, F#, E, C, A, E, C, D. Em G/B, toque B no baixo."],
-        "Piano": ["INSTRUMENTO: PIANO", "Voicings sugeridos: G (G-B-D), D/F# (F#-A-D), Em (E-G-B), C (C-E-G), Am (A-C-E), D (D-F#-A), Bm (B-D-F#), Am7 (A-C-E-G).", "Mão esquerda: fundamentais ou inversões simples; mão direita: tríades próximas. Em G/B, use B no baixo."],
-        "Baixo": ["INSTRUMENTO: BAIXO — NOTAS-GUIA", "INTRO: C | B (G/B) | A (Am7).", "ESTROFE: G | F# (D/F#) | E (Em) | C.", "PRÉ-REFRÃO: A (Am) | E (Em) | C | D.", "REFRÃO: G | B (G/B) | C | D · G | B | C | D · B (Bm) | E (Em) | B (Bm) | E (Em) · A (Am) | B (G/B) | C | D | G.", "Use as fundamentais como base e acrescente aproximações apenas se combinarem com a gravação."],
-        "Bateria": ["INSTRUMENTO: BATERIA — GUIA RÍTMICO SUGERIDO", "Isto é uma sugestão de acompanhamento, não uma transcrição oficial da bateria.", "Compasso 4/4: chimbal em colcheias; caixa nos tempos 2 e 4; bumbo nos tempos 1 e 3.", "INTRO/ESTROFE: dinâmica leve. PRÉ-REFRÃO: cresça gradualmente. REFRÃO: pratos e bumbo mais presentes. FINAL: reduza a dinâmica.", "Ajuste viradas e acentos ouvindo a gravação."],
-        "Ukulele": ["INSTRUMENTO: UKULELE", "Formas sugeridas (G-C-E-A): G 0232 · D 2220 · Em 0432 · C 0003 · Am 2000 · Bm 4222 · Am7 0000.", "Para D/F# e G/B, use inversões confortáveis ou toque D e G simplificados."]
+      const instrumentContent = {
+        "Violão": [
+          "INSTRUMENTO: VIOLÃO · TOM G",
+          "INTRO: C  G/B  Am7",
+          "ESTROFE: G  D/F#  Em  C (repetir)",
+          "PRÉ-REFRÃO: Am  Em  C  D",
+          "REFRÃO: G  G/B  C  D (repetir) · Bm  Em  Bm  Em · Am  G/B  C  D  G",
+          "FINAL: C  G/B  Am7",
+          "",
+          "POSIÇÕES: G (320003), D/F# (200232), Em (022000), C (x32010), Am (x02210), G/B (x20033), D (xx0232), Bm (x24432), Am7 (x02010).",
+          "BATIDA DE ESTUDO: ↓ ↓↑ ↑↓↑. Experimente dedilhado na introdução."
+        ],
+        "Guitarra": [
+          "INSTRUMENTO: GUITARRA · ARRANJO DE BASE",
+          "INTRO: arpejo limpo em C → G/B → Am7",
+          "ESTROFE: G5/G → D/F# → Em → C; toque leve e com espaço.",
+          "PRÉ-REFRÃO: Am → Em → C → D; aumente gradualmente a intensidade.",
+          "REFRÃO: G → G/B → C → D; base mais aberta, com acentos regulares.",
+          "PONTE: Bm → Em (alternando); volte para Am → G/B → C → D → G.",
+          "TIMBRE SUGERIDO: clean com reverb leve ou drive suave no refrão. A cifra é harmônica simplificada, não uma transcrição da guitarra gravada."
+        ],
+        "Teclado": [
+          "INSTRUMENTO: TECLADO · GUIA DE MÃOS",
+          "INTRO: mão direita C-E-G | B-D-G | A-C-E-G; mão esquerda C | B | A.",
+          "ESTROFE: G (B-D-G) → D/F# (A-D-F#) → Em (G-B-E) → C (G-C-E).",
+          "PRÉ-REFRÃO: Am (A-C-E) → Em (G-B-E) → C (G-C-E) → D (A-D-F#).",
+          "REFRÃO: G (B-D-G) → G/B (B-D-G) → C (C-E-G) → D (A-D-F#).",
+          "MÃO ESQUERDA: toque as fundamentais G, F#, E, C; no G/B, toque B. Use inversões próximas para facilitar as trocas.",
+          "Sugestão de estudo: arpejos na introdução e acordes sustentados no refrão."
+        ],
+        "Piano": [
+          "INSTRUMENTO: PIANO · VOICINGS",
+          "INTRO: C (C-E-G) → G/B (B-D-G) → Am7 (A-C-E-G).",
+          "ESTROFE: G (G-B-D) → D/F# (F#-A-D) → Em (E-G-B) → C (C-E-G).",
+          "PRÉ-REFRÃO: Am (A-C-E) → Em (E-G-B) → C (C-E-G) → D (D-F#-A).",
+          "REFRÃO: use tríades próximas G → G/B → C → D; depois Bm (B-D-F#) ↔ Em (E-G-B).",
+          "MÃO ESQUERDA: fundamentais ou oitavas; MÃO DIREITA: tríades/inversões. Evite saltos grandes e mantenha a dinâmica suave nas estrofes."
+        ],
+        "Baixo": [
+          "INSTRUMENTO: BAIXO · LINHA DE NOTAS-GUIA (não cifra para violão)",
+          "INTRO: C | B | A",
+          "ESTROFE: G | F# | E | C (repetir)",
+          "PRÉ-REFRÃO: A | E | C | D",
+          "REFRÃO: G | B | C | D · G | B | C | D",
+          "PONTE: B | E | B | E",
+          "FINAL: A | B | C | D | G",
+          "Toque uma nota fundamental por mudança de acorde; experimente oitavas e aproximações apenas quando combinarem com o arranjo. Não há transcrição oficial da linha de baixo."
+        ],
+        "Bateria": [
+          "INSTRUMENTO: BATERIA · GUIA RÍTMICO (sem cifras harmônicas)",
+          "COMPASSO SUGERIDO: 4/4",
+          "INTRODUÇÃO: chimbal fechado suave; sem viradas, deixe espaço para a música começar.",
+          "ESTROFE: chimbal em colcheias; bumbo nos tempos 1 e 3; caixa nos tempos 2 e 4, com dinâmica baixa.",
+          "PRÉ-REFRÃO: aumente gradualmente a intensidade e abra um pouco o chimbal.",
+          "REFRÃO: bumbo mais presente, caixa firme nos tempos 2 e 4 e prato nos inícios de frase.",
+          "PONTE: reduza a dinâmica e faça uma virada curta para retornar ao refrão.",
+          "FINAL: acompanhe o encerramento e finalize junto com a banda.",
+          "Este é um exercício rítmico sugerido, não uma transcrição da bateria original."
+        ],
+        "Ukulele": [
+          "INSTRUMENTO: UKULELE · AFINAÇÃO G-C-E-A",
+          "INTRO: C (0003) → G/B (0232, versão simplificada G) → Am7 (0000).",
+          "ESTROFE: G (0232) → D (2220, simplifique D/F#) → Em (0432) → C (0003).",
+          "PRÉ-REFRÃO: Am (2000) → Em (0432) → C (0003) → D (2220).",
+          "REFRÃO: G (0232) → G (0232) → C (0003) → D (2220); Bm (4222) ↔ Em (0432).",
+          "BATIDA DE ESTUDO: ↓ ↓↑ ↑↓↑; mantenha a mão direita leve nas estrofes."
+        ]
       };
-      const selectedInstrument = instrumentParts[instrument] || instrumentParts["Violão"];
       const progressions = [
-        ...chordSections, "", ...selectedInstrument, "",
-        "Aviso: material simplificado de estudo, sem letra. As orientações por instrumento são sugestões e podem diferir do arranjo gravado.",
+        "AH, JESUS / CORAÇÃO IGUAL AO TEU — Julliany Souza",
+        "Guia simplificado específico para o instrumento selecionado. Tom de referência: G.",
+        "",
+        ...(instrumentContent[instrument] || instrumentContent["Violão"]),
+        "",
+        "Aviso: guia de estudo sugerido, sem letra e sem pretensão de reproduzir exatamente o arranjo gravado.",
         "Referência para conferência: https://www.cifraclub.com.br/julliany-souza/ah-jesus-coracao-igual-ao-teu-2-2/"
       ].join("\n");
       chord = {
