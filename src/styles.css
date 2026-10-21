@@ -1099,3 +1099,38 @@ body{background:#f7f8fc;color:var(--sl-ink)}
   .reference-instrument-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .reference-chords-tools { align-items:flex-start; flex-direction:column; }
 }
+
+
+/* Catálogo interno de cifras */
+.reference-chords-catalog-status {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 13px 15px;
+  margin: 14px 0;
+  border: 1px solid var(--border, #dbe3ef);
+  border-radius: 12px;
+  color: var(--text-secondary, #596579);
+  background: var(--surface-soft, #f8fafc);
+  font-size: 13px;
+  line-height: 1.5;
+}
+.reference-chords-catalog-status svg { flex: 0 0 auto; margin-top: 1px; color: #7852ff; }
+.reference-chords-publish {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 14px 0 18px;
+}
+.reference-chords-publish button {
+  border: 0;
+  border-radius: 10px;
+  padding: 12px 17px;
+  background: #7651ff;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reference-chords-publish button:disabled { opacity: .55; cursor: not-allowed; }
+.reference-chords-publish small { flex: 1 1 220px; color: var(--text-secondary, #596579); line-height: 1.45; }
