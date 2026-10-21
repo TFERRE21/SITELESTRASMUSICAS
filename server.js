@@ -276,6 +276,51 @@ const server = http.createServer(async (req, res) => {
       return json(res, 200, { favorites });
     } catch (error) { return json(res, 400, { error: error.message || "Não foi possível salvar favoritos." }); }
   }
+  if (url.pathname === "/api/chords/generate" && req.method === "POST") {
+    const apiKey = process.env.OPENAI_API_KEY;
+    if (!apiKey) return json(res, 503, { error: "A geração por IA ainda não está configurada no servidor. Adicione OPENAI_API_KEY nas variáveis de ambiente do iContainer para ativá-la." });
+    try {
+      const body = await readBody(req);
+      const title = String(body.title || "").trim().slice(0, 200);
+      const artist = String(body.artist || "").trim().slice(0, 200);
+      const instrument = String(body.instrument || "Violão").trim().slice(0, 40);
+      const allowedInstruments = ["Violão", "Guitarra", "Teclado", "Piano", "Baixo", "Bateria", "Ukulele"];
+      if (!title || !artist || !allowedInstruments.includes(instrument)) return json(res, 400, { error: "Informe uma música, um artista e um instrumento válido." });
+      const model = process.env.OPENAI_CHORDS_MODEL || "gpt-5.5";
+      const prompt = [
+        "Você é um assistente de teoria musical. Crie uma sugestão harmônica ORIGINAL e aproximada para estudo, não uma transcrição oficial nem uma afirmação de que conhece os acordes exatos da gravação.",
+        "Não forneça letras de músicas protegidas por direitos autorais. Não alegue ter ouvido a gravação se não a ouviu.",
+        "Retorne apenas um esquema prático em português com: título e artista; aviso 'Sugestão harmônica gerada por IA — não é cifra oficial'; tom sugerido; andamento aproximado apenas se puder estimar sem inventar (caso contrário, escreva 'não estimado'); introdução; estrofe; refrão; ponte e final, usando progressões de acordes plausíveis para o estilo.",
+        "Para bateria, descreva uma levada genérica de estudo em vez de acordes. Para baixo, indique notas fundamentais sugeridas por compasso. Para violão, guitarra, teclado, piano e ukulele, use nomes de acordes e progressões. Seja claro que a harmonia pode não coincidir com a gravação.",
+        "Música: " + title,
+        "Artista: " + artist,
+        "Instrumento: " + instrument
+      ].join("\n");
+      const aiResponse = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: { "Authorization": "Bearer " + apiKey, "Content-Type": "application/json" },
+        body: JSON.stringify({ model, input: prompt, max_output_tokens: 900 })
+      });
+      const aiData = await aiResponse.json().catch(() => ({}));
+      if (!aiResponse.ok) {
+        const message = aiData?.error?.message || "O serviço de IA recusou a solicitação.";
+        return json(res, aiResponse.status === 429 ? 429 : 502, { error: "Não foi possível gerar a sugestão: " + message });
+      }
+      const content = Array.isArray(aiData.output)
+        ? aiData.output.flatMap((item) => Array.isArray(item.content) ? item.content : []).filter((item) => item.type === "output_text").map((item) => item.text).join("\n").trim()
+        : "";
+      if (!content) return json(res, 502, { error: "A IA não retornou uma sugestão de acordes. Tente novamente." });
+      const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const chords = await readJsonFile(chordsFile, []);
+      const index = chords.findIndex((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument));
+      const chord = { id: index >= 0 ? chords[index].id : randomBytes(12).toString("hex"), title, artist, instrument, content, source: "ai-suggestion", updatedAt: new Date().toISOString() };
+      if (index >= 0) chords[index] = chord; else chords.push(chord);
+      await writeJsonFile(chordsFile, chords.slice(-10000));
+      return json(res, 200, { chord, source: "ai-suggestion", model });
+    } catch (error) {
+      return json(res, 500, { error: error.message || "Erro ao gerar sugestão de acordes." });
+    }
+  }
   if (url.pathname === "/api/chords" && req.method === "GET") {
     const title = String(url.searchParams.get("title") || "").trim().slice(0, 200);
     const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
