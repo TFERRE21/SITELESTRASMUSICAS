@@ -38,7 +38,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           </div>
         </section>
         <section className="reference-inline-player" aria-label="Mini player musical">
-          {lyrics.previewUrl && <audio ref={audioRef} src={lyrics.previewUrl} preload="metadata" onTimeUpdate={(event)=>setPreviewTime(event.currentTarget.currentTime)} onLoadedMetadata={(event)=>setPreviewDuration(event.currentTarget.duration || 0)} onEnded={()=>setIsPreviewPlaying(false)} />}
+          {lyrics.previewUrl && <audio ref={audioRef} src={lyrics.previewUrl} preload="metadata" onTimeUpdate={(event)=>setPreviewTime(event.currentTarget.currentTime || 0)} onDurationChange={(event)=>{const duration=event.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setPreviewDuration(duration)}} onLoadedMetadata={(event)=>{const duration=event.currentTarget.duration;if(Number.isFinite(duration)&&duration>0)setPreviewDuration(duration)}} onLoadedData={(event)=>{const audio=event.currentTarget;if(Number.isFinite(audio.duration)&&audio.duration>0)setPreviewDuration(audio.duration);setPreviewTime(audio.currentTime||0)}} onPlaying={()=>setIsPreviewPlaying(true)} onPause={()=>setIsPreviewPlaying(false)} onEnded={()=>{setIsPreviewPlaying(false);setPreviewTime(0)}} />}
           <div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>{lyrics.previewUrl ? (isPreviewPlaying ? "Tocando agora" : "Mini player") : (video ? "Player oficial incorporado" : "Mini player disponível")}</strong><small>{lyrics.previewUrl ? "Prévia de áudio do catálogo musical" : "Esta faixa não tem prévia de áudio neste catálogo"}</small></div><button type="button" onClick={onListen} className="reference-yellow">{lyrics.previewUrl ? (isPreviewPlaying ? "Parar música" : "Ouvir música") : (video ? "Ver player abaixo" : videoLoading ? "Carregando..." : "Carregar player")}</button></div>
           {lyrics.previewUrl ? <div className="reference-inline-player__timeline"><span>{Math.floor(previewTime/60)}:{String(Math.floor(previewTime%60)).padStart(2,"0")}</span><input type="range" min="0" max={Math.max(1,previewDuration)} step="0.1" value={Math.min(previewTime,previewDuration || 0)} onChange={(event)=>onSeekPreview(Number(event.target.value))} aria-label="Avançar ou retroceder na prévia"/><span>{Math.floor(previewDuration/60)}:{String(Math.floor(previewDuration%60)).padStart(2,"0")}</span></div> : <div className="reference-inline-player__timeline reference-inline-player__timeline--unavailable"><span>--:--</span><input type="range" min="0" max="1" value="0" disabled aria-label="Barra indisponível sem prévia de áudio"/><span>--:--</span></div>}
           <p className="reference-inline-player__notice">{lyrics.previewUrl ? "A barra permite avançar e voltar dentro da prévia disponível. A duração depende do catálogo; nem toda faixa oferece a música completa." : "Para evitar redirecionamentos, carregue o player oficial abaixo. O controle de avanço do YouTube fica dentro do próprio player; não é possível controlar o áudio do YouTube por esta barra personalizada."}</p>
@@ -120,6 +120,22 @@ export default function App() {
   const [commentError, setCommentError] = useState("");
   const [commentNotice, setCommentNotice] = useState("");
   const audioRef = useRef(null);
+
+  // Sincroniza o mini player com o relógio real do elemento de áudio.
+  // Alguns catálogos demoram a disparar loadedmetadata/timeupdate de forma consistente.
+  useEffect(() => {
+    if (!isPreviewPlaying) return undefined;
+    const syncAudioProgress = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (Number.isFinite(audio.currentTime)) setPreviewTime(audio.currentTime);
+      if (Number.isFinite(audio.duration) && audio.duration > 0) setPreviewDuration(audio.duration);
+      if (audio.ended) setIsPreviewPlaying(false);
+    };
+    syncAudioProgress();
+    const intervalId = window.setInterval(syncAudioProgress, 200);
+    return () => window.clearInterval(intervalId);
+  }, [isPreviewPlaying]);
 
   useEffect(() => {
     const token = window.localStorage.getItem("somletra_token");
