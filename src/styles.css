@@ -1134,3 +1134,26 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 }
 .reference-chords-publish button:disabled { opacity: .55; cursor: not-allowed; }
 .reference-chords-publish small { flex: 1 1 220px; color: var(--text-secondary, #596579); line-height: 1.45; }
+
+
+/* Sugestão harmônica por IA */
+.reference-chords-generate {
+  display: block;
+  width: 100%;
+  border: 1px solid #7651ff;
+  border-radius: 10px;
+  padding: 12px 16px;
+  margin: 0 0 8px;
+  background: #7651ff;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+.reference-chords-generate:disabled { opacity: .6; cursor: wait; }
+.reference-chords-ai-note {
+  display: block;
+  margin: 0 0 14px;
+  color: var(--text-secondary, #596579);
+  font-size: 12px;
+  line-height: 1.5;
+}
