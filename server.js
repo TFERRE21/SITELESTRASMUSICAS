@@ -281,7 +281,7 @@ const server = http.createServer(async (req, res) => {
     const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
     const instrument = String(url.searchParams.get("instrument") || "Violão").trim().slice(0, 40);
     if (!title || !artist) return json(res, 400, { error: "Informe o título da música e o artista." });
-    const key = (value) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const chords = await readJsonFile(chordsFile, []);
     const chord = chords.find((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument)) || null;
     return json(res, 200, { chord, total: chords.length });
@@ -296,7 +296,7 @@ const server = http.createServer(async (req, res) => {
       if (!title || !artist || !content || content.length < 3) return json(res, 400, { error: "Informe música, artista e uma cifra com pelo menos 3 caracteres." });
       const allowedInstruments = ["Violão", "Guitarra", "Teclado", "Piano", "Baixo", "Bateria", "Ukulele"];
       if (!allowedInstruments.includes(instrument)) return json(res, 400, { error: "Instrumento não reconhecido." });
-      const key = (value) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
       const chords = await readJsonFile(chordsFile, []);
       const index = chords.findIndex((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument));
       const chord = { id: index >= 0 ? chords[index].id : randomBytes(12).toString("hex"), title, artist, instrument, content, updatedAt: new Date().toISOString() };
