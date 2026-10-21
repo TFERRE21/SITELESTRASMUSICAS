@@ -344,6 +344,68 @@ const server = http.createServer(async (req, res) => {
     } catch (error) { return json(res, 400, { error: error.message || "Não foi possível atualizar o chamado." }); }
   }
 
+
+  if (req.method === "GET" && url.pathname === "/api/genre-artists") {
+    const genre = (url.searchParams.get("genre") || "").trim().slice(0, 80);
+    if (!genre) return json(res, 400, { error: "Informe o gênero musical.", items: [] });
+    const norm = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+    const key = norm(genre);
+    const aliases = {
+      gospel: ["gospel", "christian", "louvor", "adoração"], sertanejo: ["sertanejo", "sertanejo brasileiro"],
+      mpb: ["mpb", "musica popular brasileira"], pop: ["pop brasileiro", "brazilian pop"],
+      rock: ["rock brasileiro", "brazilian rock"], rap: ["rap brasileiro", "brazilian rap", "hip hop brasileiro"],
+      funk: ["funk brasileiro", "funk carioca"], pagode: ["pagode", "pagode brasileiro"],
+      samba: ["samba", "samba brasileiro"], forro: ["forro", "forro brasileiro"],
+      reggae: ["reggae brasileiro", "reggae"], indie: ["indie brasileiro", "indie pop"],
+      jazz: ["jazz brasileiro", "jazz"], "musica latina": ["latin", "musica latina"]
+    };
+    const curated = {
+      gospel: ["Aline Barros", "Fernandinho", "Gabriela Rocha", "Anderson Freire", "Diante do Trono", "Isadora Pompeo", "Bruna Karla", "Thalles Roberto", "Casa Worship", "Preto no Branco"],
+      sertanejo: ["Jorge & Mateus", "Marília Mendonça", "Gusttavo Lima", "Henrique & Juliano", "Maiara & Maraisa", "Zezé Di Camargo & Luciano", "Chitãozinho & Xororó"],
+      mpb: ["Gilberto Gil", "Caetano Veloso", "Marisa Monte", "Djavan", "Elis Regina", "Milton Nascimento", "Maria Bethânia"],
+      pop: ["Anitta", "Luísa Sonza", "IZA", "Jão", "Ludmilla", "Dua Lipa", "Taylor Swift"],
+      rock: ["Legião Urbana", "Titãs", "Capital Inicial", "Barão Vermelho", "Skank", "Pitty", "Charlie Brown Jr."],
+      rap: ["Emicida", "Racionais MC's", "Criolo", "Djonga", "Mano Brown", "BK'", "MV Bill"],
+      funk: ["MC Kevin", "Anitta", "MC Hariel", "MC Ryan SP", "Ludmilla", "Dennis DJ"],
+      pagode: ["Ferrugem", "Dilsinho", "Sorriso Maroto", "Grupo Menos é Mais", "Péricles", "Belo"],
+      samba: ["Zeca Pagodinho", "Martinho da Vila", "Beth Carvalho", "Jorge Aragão", "Arlindo Cruz", "Paulinho da Viola"],
+      forro: ["Luiz Gonzaga", "Wesley Safadão", "Mastruz com Leite", "João Gomes", "Dorgival Dantas", "Falamansa"],
+      reggae: ["Natiruts", "Cidade Negra", "Maneva", "Planta e Raiz", "Bob Marley"],
+      indie: ["Terno Rei", "O Grilo", "Los Hermanos", "Rubel", "Clarice Falcão"],
+      jazz: ["João Gilberto", "Hermeto Pascoal", "Eliane Elias", "Baden Powell", "Azimuth"],
+      "musica latina": ["Shakira", "Juanes", "Bad Bunny", "Karol G", "Maná"]
+    };
+    try {
+      const found = new Map();
+      for (const tag of (aliases[key] || [genre]).slice(0, 3)) {
+        const mbUrl = new URL("https://musicbrainz.org/ws/2/artist");
+        mbUrl.searchParams.set("query", `tag:"${tag.replace(/["\\\\]/g, " ")}"`);
+        mbUrl.searchParams.set("fmt", "json");
+        mbUrl.searchParams.set("limit", "30");
+        const response = await fetch(mbUrl, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(9000) });
+        if (!response.ok) continue;
+        const payload = await response.json();
+        for (const artist of payload.artists || []) {
+          const name = String(artist.name || "").trim();
+          const id = String(artist.id || "");
+          const normalized = norm(name);
+          if (!name || !id || found.has(normalized)) continue;
+          found.set(normalized, { id: `mb-artist-${id}`, name, title: name, artist: genre, country: artist.country || "", disambiguation: artist.disambiguation || "", provider: "MusicBrainz", providerUrl: `https://musicbrainz.org/artist/${id}` });
+        }
+      }
+      let items = [...found.values()].slice(0, 30);
+      let source = "MusicBrainz";
+      if (!items.length) {
+        items = (curated[key] || []).map((name, index) => ({ id: `curated-${key}-${index}`, name, title: name, artist: genre, provider: "Seleção editorial", providerUrl: "" }));
+        source = "Seleção editorial";
+      }
+      return json(res, 200, { genre, items, total: items.length, source, note: items.length ? "" : "Não encontramos artistas para este gênero. Tente novamente mais tarde." });
+    } catch (error) {
+      const items = (curated[key] || []).map((name, index) => ({ id: `curated-${key}-${index}`, name, title: name, artist: genre, provider: "Seleção editorial", providerUrl: "" }));
+      return json(res, 200, { genre, items, total: items.length, source: items.length ? "Seleção editorial" : "MusicBrainz", note: items.length ? "Lista editorial usada porque o catálogo de artistas está temporariamente indisponível." : "Não foi possível carregar artistas agora." });
+    }
+  }
+
   if (req.method === "GET" && url.pathname === "/api/music-search") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
     if (q.length < 2) return json(res, 400, { error: "Digite pelo menos duas letras para pesquisar." });
