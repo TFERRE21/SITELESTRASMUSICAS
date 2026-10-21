@@ -34,14 +34,14 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           <Cover item={{...lyrics, artworkUrl:lyrics.artworkUrl}} index={0} className="reference-song-cover"/>
           <div className="reference-song-meta"><h1>{lyrics.title}</h1><p className="reference-song-artist">{lyrics.artist}</p>
             <p className="reference-song-album">{lyrics.album ? `Álbum: ${lyrics.album}` : "Detalhes do lançamento conforme disponíveis no catálogo"}{lyrics.releaseDate ? ` · Ano: ${String(lyrics.releaseDate).slice(0,4)}` : ""}{lyrics.genre ? ` · Gênero: ${lyrics.genre}` : ""}</p>
-            <div className="reference-song-actions"><button className="reference-yellow" onClick={onListen}><Play size={16} fill="currentColor"/> Ouvir</button><button onClick={onPrint}><Printer size={16}/> Imprimir</button><button onClick={onDownload} disabled={!hasLyrics}><Download size={16}/> Baixar (PDF)</button><button onClick={onShare}><Share2 size={16}/> Compartilhar</button><span className="reference-font-controls"><button onClick={()=>setFontScale(Math.max(.8,fontScale-.1))} aria-label="Diminuir fonte">A-</button><button onClick={()=>setFontScale(Math.min(1.4,fontScale+.1))} aria-label="Aumentar fonte">A+</button></span><button className={saved ? "reference-save is-saved" : "reference-save"} onClick={onSave}><Heart size={17} fill={saved ? "currentColor" : "none"}/> Favoritar</button></div>
+            <div className="reference-song-actions"><button className="reference-yellow" onClick={onListen}>{isPreviewPlaying ? <><Square size={15} fill="currentColor"/> Parar música</> : <><Play size={16} fill="currentColor"/> Ouvir música</>}</button><button onClick={onPrint}><Printer size={16}/> Imprimir</button><button onClick={onDownload} disabled={!hasLyrics}><Download size={16}/> Baixar (PDF)</button><button onClick={onShare}><Share2 size={16}/> Compartilhar</button><span className="reference-font-controls"><button onClick={()=>setFontScale(Math.max(.8,fontScale-.1))} aria-label="Diminuir fonte">A-</button><button onClick={()=>setFontScale(Math.min(1.4,fontScale+.1))} aria-label="Aumentar fonte">A+</button></span><button className={saved ? "reference-save is-saved" : "reference-save"} onClick={onSave}><Heart size={17} fill={saved ? "currentColor" : "none"}/> Favoritar</button></div>
           </div>
         </section>
         {lyrics.previewUrl ? <section className="reference-inline-player" aria-label="Reprodutor de prévia musical">
           <audio ref={audioRef} src={lyrics.previewUrl} preload="metadata" onTimeUpdate={(event)=>setPreviewTime(event.currentTarget.currentTime)} onLoadedMetadata={(event)=>setPreviewDuration(event.currentTarget.duration || 0)} onEnded={()=>setIsPreviewPlaying(false)} />
-          <div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>{isPreviewPlaying ? "Reproduzindo prévia" : "Ouvir prévia da música"}</strong><small>Prévia disponibilizada pelo catálogo musical</small></div><button type="button" onClick={onListen} className="reference-yellow">{isPreviewPlaying ? "Pausar" : "Tocar"}</button></div>
+          <div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>{isPreviewPlaying ? "Tocando agora" : "Mini player"}</strong><small>Prévia de áudio do catálogo musical</small></div><button type="button" onClick={onListen} className="reference-yellow">{isPreviewPlaying ? "Parar" : "Tocar"}</button></div>
           <div className="reference-inline-player__timeline"><span>{Math.floor(previewTime/60)}:{String(Math.floor(previewTime%60)).padStart(2,"0")}</span><input type="range" min="0" max={Math.max(1,previewDuration)} step="0.1" value={Math.min(previewTime,previewDuration || 0)} onChange={(event)=>onSeekPreview(Number(event.target.value))} aria-label="Avançar ou retroceder na prévia"/><span>{Math.floor(previewDuration/60)}:{String(Math.floor(previewDuration%60)).padStart(2,"0")}</span></div>
-          <p className="reference-inline-player__notice">Esta é uma prévia de áudio fornecida pelo catálogo, não a reprodução integral da faixa.</p>
+          <p className="reference-inline-player__notice">A barra permite avançar e voltar dentro da prévia disponível. A duração depende do catálogo; nem toda faixa oferece a música completa.</p>
         </section> : <section className="reference-inline-player reference-inline-player--notice"><div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>Reprodução pela fonte oficial</strong><small>Quando disponível, o vídeo abre incorporado nesta página.</small></div><button type="button" onClick={onListen} className="reference-yellow">{video ? "Ir ao player" : videoLoading ? "Carregando..." : "Carregar player"}</button></div><p className="reference-inline-player__notice">A faixa completa pode não oferecer prévia de áudio neste catálogo. Para respeitar as regras da plataforma, vídeos do YouTube são exibidos no player oficial incorporado, com seus controles e identificação.</p></section>}
         <div className="reference-song-grid">
           <section className="reference-lyrics-card"><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></section>
@@ -203,16 +203,31 @@ export default function App() {
     if (!lyrics) return;
     if (lyrics.previewUrl && audioRef.current) {
       try {
-        if (isPreviewPlaying) { audioRef.current.pause(); setIsPreviewPlaying(false); }
-        else { await audioRef.current.play(); setIsPreviewPlaying(true); }
+        if (isPreviewPlaying) {
+          audioRef.current.pause();
+          audioRef.current.currentTime = 0;
+          setPreviewTime(0);
+          setIsPreviewPlaying(false);
+        } else {
+          await audioRef.current.play();
+          setIsPreviewPlaying(true);
+        }
         return;
-      } catch { setIsPreviewPlaying(false); }
+      } catch {
+        setIsPreviewPlaying(false);
+        setMessage("Não foi possível reproduzir esta prévia. Tente novamente.");
+        return;
+      }
     }
     if (video?.videoId) {
       document.querySelector(".reference-video-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      setMessage("Esta faixa não tem prévia de áudio disponível. Use o player oficial incorporado para assistir/ouvir.");
       return;
     }
-    if (!videoLoading) loadMusicVideo();
+    if (!videoLoading) {
+      setMessage("Esta música não oferece prévia de áudio neste catálogo. Vou procurar um player oficial incorporado, sem abrir outra página.");
+      loadMusicVideo();
+    }
   };
   const seekPreview = (time) => {
     if (!audioRef.current || !Number.isFinite(time)) return;
