@@ -975,3 +975,11 @@ body{background:#f7f8fc;color:var(--sl-ink)}
   .reference-song-page,.reference-song-layout,.reference-song-main,.reference-song-grid,.reference-lyrics-card,.reference-lyrics-text{display:block!important;position:static!important;visibility:visible!important;overflow:visible!important;height:auto!important;max-height:none!important;transform:none!important;opacity:1!important}
   .reference-lyrics-text{white-space:pre-wrap!important;overflow-wrap:anywhere!important}
 }
+
+
+/* Mini player musical com controles consistentes no topo e na linha do tempo. */
+.reference-inline-player{box-shadow:0 8px 24px rgba(45,34,95,.06)}
+.reference-inline-player__timeline input{height:5px;appearance:none;-webkit-appearance:none;border-radius:99px;background:linear-gradient(90deg,#7956e8 0%,#b5a1ff 100%);outline:none}
+.reference-inline-player__timeline input::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:14px;height:14px;border:3px solid #fff;border-radius:50%;background:#7956e8;box-shadow:0 0 0 1px #7956e8}
+.reference-inline-player__timeline input::-moz-range-thumb{width:10px;height:10px;border:3px solid #fff;border-radius:50%;background:#7956e8;box-shadow:0 0 0 1px #7956e8}
+.reference-song-actions .reference-yellow{min-width:132px}
