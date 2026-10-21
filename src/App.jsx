@@ -309,11 +309,27 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
     return () => { cancelled = true; };
   }, [songView, lyrics?.title, lyrics?.artist, instrument]);
 
-  const generateChordSuggestion = () => {
-    const query = encodeURIComponent(`${lyrics?.title || ""} ${lyrics?.artist || ""} cifra acordes`);
-    window.open(`https://www.google.com/search?q=${query}`, "_blank", "noopener,noreferrer");
-    setChordCatalogStatus("empty");
-    setChordCatalogMessage("Busca gratuita aberta em outra aba. Confira a fonte, copie somente os acordes que puder utilizar e cole no editor para salvar no catálogo.");
+  const generateChordSuggestion = async () => {
+    if (!lyrics?.title || !lyrics?.artist) return;
+    setChordCatalogStatus("loading");
+    setChordCatalogMessage("Consultando o catálogo interno do Site Músicas...");
+    try {
+      const response = await fetch(`/api/chords?title=${encodeURIComponent(lyrics.title)}&artist=${encodeURIComponent(lyrics.artist)}&instrument=${encodeURIComponent(instrument)}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível consultar o catálogo interno.");
+      if (data.chord?.content) {
+        setChordInput(data.chord.content);
+        setTransposeBy(0);
+        setChordCatalogStatus("found");
+        setChordCatalogMessage("Acordes carregados diretamente no Site Músicas.");
+      } else {
+        setChordCatalogStatus("empty");
+        setChordCatalogMessage("Ainda não temos acordes cadastrados para esta música. Você pode inserir uma progressão e salvá-la no catálogo.");
+      }
+    } catch (error) {
+      setChordCatalogStatus("error");
+      setChordCatalogMessage(error.message || "Falha ao consultar o catálogo interno.");
+    }
   };
 
   const publishChordToCatalog = async () => {
@@ -419,8 +435,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
               </div>
               <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
               <div className="reference-chords-editor">
-                <button type="button" className="reference-chords-generate" onClick={generateChordSuggestion}>Buscar cifras grátis</button>
-                <small className="reference-chords-ai-note">Pesquisa gratuita, sem API paga. Quando encontrar os acordes, cole no campo abaixo e salve no catálogo do site.</small>
+                <button type="button" className="reference-chords-generate" onClick={generateChordSuggestion}>Consultar catálogo do site</button>
+                <small className="reference-chords-ai-note">As cifras disponíveis são exibidas aqui no site. Você pode editar os acordes e salvá-los no catálogo interno.</small>
                 <label htmlFor="chord-input">Se já tiver os acordes, cole aqui</label>
                 <textarea id="chord-input" value={chordInput} onChange={(event) => { setChordInput(event.target.value); setTransposeBy(0); }} placeholder={"Ex.: Am  F  C  G\nCole aqui a sequência de acordes ou a cifra com a letra."} rows={4}/>
                 <div className="reference-chords-tools">
