@@ -289,8 +289,51 @@ const server = http.createServer(async (req, res) => {
     if (!title || !artist) return json(res, 400, { error: "Informe o título da música e o artista." });
     const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
     const chords = await readJsonFile(chordsFile, []);
-    const chord = chords.find((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument)) || null;
-    return json(res, 200, { chord, total: chords.length });
+    let chord = chords.find((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument)) || null;
+
+    // Small, locally hosted starter catalog: chord progressions only (no copyrighted lyrics).
+    // The page stays on Site Músicas and does not redirect users to a search engine.
+    const normalizedTitle = key(title);
+    const normalizedArtist = key(artist);
+    if (!chord && (normalizedTitle.includes("ah jesus") || normalizedTitle.includes("coracao igual ao teu"))) {
+      const progressions = [
+        "AH, JESUS / CORAÇÃO IGUAL AO TEU — Julliany Souza",
+        "Tom de referência: G (Sol maior). Versão simplificada para estudo; confirme com a gravação.",
+        "",
+        "INTRODUÇÃO",
+        "C  G/B  Am7",
+        "",
+        "ESTROFE — progressão sugerida",
+        "G  D/F#  Em  C",
+        "G  D/F#  Em  C",
+        "",
+        "PRÉ-REFRÃO — progressão sugerida",
+        "Am  Em  C  D",
+        "",
+        "REFRÃO — progressão sugerida",
+        "G  G/B  C  D",
+        "G  G/B  C  D",
+        "Bm  Em  Bm  Em",
+        "Am  G/B  C  D  G",
+        "",
+        "FINAL / INTERLÚDIO",
+        "C  G/B  Am7",
+        "",
+        "Acordes usados: G, D/F#, Em, C, Am, G/B, D, Bm, Am7.",
+        "Aviso: arranjo simplificado de acordes, sem letra. Pode haver diferenças entre versões e gravações.",
+        "Referência para conferência: https://www.cifraclub.com.br/julliany-souza/ah-jesus-coracao-igual-ao-teu-2-2/"
+      ].join("\n");
+      chord = {
+        id: "builtin-ah-jesus-coracao-igual-ao-teu",
+        title: "Ah, Jesus / Coração Igual Ao Teu",
+        artist: "Julliany Souza",
+        instrument,
+        content: progressions,
+        source: "catalogo-interno-referencia",
+        updatedAt: "2026-10-21T00:00:00.000Z"
+      };
+    }
+    return json(res, 200, { chord, total: chords.length + (chord?.source === "catalogo-interno-referencia" ? 1 : 0) });
   }
   if (url.pathname === "/api/chords" && req.method === "POST") {
     try {
