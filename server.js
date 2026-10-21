@@ -625,19 +625,31 @@ const server = http.createServer(async (req, res) => {
           "BATIDA DE ESTUDO: ↓ ↓↑ ↑↓↑; use Bm simplificado se necessário."
         ]
       };
+      const instrumentKey = key(instrument);
+      const instrumentAliases = {
+        "violao": "Violão",
+        "guitarra": "Guitarra",
+        "teclado": "Teclado",
+        "piano": "Piano",
+        "baixo": "Baixo",
+        "bateria": "Bateria",
+        "ukulele": "Ukulele"
+      };
+      const selectedInstrument = instrumentAliases[instrumentKey] || "Violão";
+      const selectedGuide = instrumentGuides[selectedInstrument] || instrumentGuides["Violão"];
       chord = {
-        id: "builtin-ressuscita-me-aline-barros",
+        id: "builtin-ressuscita-me-aline-barros-" + instrumentKey,
         title: "Ressuscita-me",
         artist: "Aline Barros",
-        instrument,
+        instrument: selectedInstrument,
         content: [
           "REFERÊNCIA INTERNA SIMPLIFICADA · RESSUSCITA-ME — ALINE BARROS",
-          ...(instrumentGuides[instrument] || instrumentGuides["Violão"]),
+          ...selectedGuide,
           "",
           "Aviso: guia de acordes para estudo, sem letra e sem pretensão de reproduzir exatamente a gravação ao vivo.",
           "Fonte para conferir a versão completa: https://www.cifraclub.com.br/aline-barros/ressuscita-me/"
         ].join("\n"),
-        source: "catalogo-interno-referencia",
+38880        source: "catalogo-interno-referencia",
         updatedAt: new Date().toISOString()
       };
     }
