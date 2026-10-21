@@ -356,6 +356,57 @@ const server = http.createServer(async (req, res) => {
         } catch { /* Try another query variant before falling back to external sources. */ }
       }
     }
+    // Second content provider: Ultimate Guitar community scraper package.
+    // It is best-effort because the upstream website can block requests or change its format.
+    if (!chord) {
+      try {
+        const ugModule = await import("ultimate-guitar");
+        const guitarFactory = ugModule.guitar || ugModule.default?.guitar;
+        if (typeof guitarFactory === "function") {
+          const ug = guitarFactory();
+          const category = ug.category?.CHORDS ?? 300;
+          const result = await Promise.race([
+            ug.search(title, artist, category),
+            new Promise((_, reject) => setTimeout(() => reject(new Error("Ultimate Guitar search timeout")), 9000))
+          ]);
+          const results = Array.isArray(result?.responses) ? result.responses : [];
+          const titleTokens = key(title).split(" ").filter(Boolean);
+          const artistTokens = key(artist).split(" ").filter(Boolean);
+          const overlap = (tokens, candidate) => tokens.length ? tokens.filter((token) => key(candidate).split(" ").includes(token)).length / tokens.length : 0;
+          const candidates = results.filter((item) => {
+            const candidateTitle = item.song_name || item.songName || item.title || "";
+            const candidateArtist = item.artist_name || item.artistName || item.band_name || "";
+            return overlap(titleTokens, candidateTitle) >= 0.6 && overlap(artistTokens, candidateArtist) >= 0.3 && (item.tab_url || item.url);
+          }).slice(0, 5);
+          for (const candidate of candidates) {
+            try {
+              const detail = await Promise.race([
+                ug.fetch(candidate),
+                new Promise((_, reject) => setTimeout(() => reject(new Error("Ultimate Guitar fetch timeout")), 9000))
+              ]);
+              const body = detail?.response ?? detail?.contentText ?? detail?.content ?? detail?.tab?.contentText ?? "";
+              const content = typeof body === "string" ? body.trim() : Array.isArray(body) ? body.map(String).join("\\n").trim() : "";
+              const candidateTitle = String(candidate.song_name || candidate.songName || candidate.title || title).slice(0, 200);
+              const candidateArtist = String(candidate.artist_name || candidate.artistName || candidate.band_name || artist).slice(0, 160);
+              if (content.length > 20 && content.length <= 30000 && key(candidateTitle) === titleKey &&
+                  (key(candidateArtist) === artistKey || key(candidateArtist).includes(artistKey) || artistKey.includes(key(candidateArtist)))) {
+                chord = {
+                  id: "ultimate-guitar-" + String(candidate.id || slug(candidateArtist) + "-" + slug(candidateTitle)),
+                  title: candidateTitle,
+                  artist: candidateArtist,
+                  instrument,
+                  content,
+                  source: "Ultimate Guitar",
+                  sourceUrl: candidate.tab_url || candidate.url || "https://www.ultimate-guitar.com/",
+                  updatedAt: new Date().toISOString()
+                };
+                break;
+              }
+            } catch { /* Try the next matching Ultimate Guitar entry. */ }
+          }
+        }
+      } catch { /* Keep the Cifra Club and external search fallbacks available. */ }
+    }
     // Search providers automatically when no complete chord content was returned.
     if (!chord) {
       const query = `${title} ${artist}`.slice(0, 180);
