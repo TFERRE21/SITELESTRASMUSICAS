@@ -588,7 +588,7 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 .portal-nav button:last-child{display:none}
 .portal-header-actions{grid-column:4;grid-row:1;gap:12px}
 .portal-hero--campaign{position:relative;isolation:isolate;display:flex;align-items:center;overflow:hidden;min-height:250px;margin:0;border-radius:0;max-width:none;background:#090b2a;box-shadow:none}
-.portal-hero--campaign:before{content:"";position:absolute;inset:0;z-index:-2;background-image:url("https://images.unsplash.com/photo-1758273240116-f407c136e76d?auto=format&fit=crop&fm=jpg&w=1800&q=82");background-size:auto 260%;background-repeat:no-repeat;background-position:right 45%;opacity:.88;background-color:#090b2a}
+.portal-hero--campaign:before{content:"";position:absolute;inset:0;z-index:-2;background-image:url("https://images.unsplash.com/photo-1757436567199-eb9bf740adc7?auto=format&fit=crop&fm=jpg&w=1800&q=82");background-size:auto 260%;background-repeat:no-repeat;background-position:right 45%;opacity:.88;background-color:#090b2a}
 .portal-hero--campaign:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,rgba(6,8,32,.98) 0%,rgba(8,8,39,.92) 27%,rgba(20,9,57,.42) 56%,rgba(13,8,37,.08) 100%),linear-gradient(0deg,rgba(7,9,31,.25),rgba(7,9,31,.08))}
 .portal-hero--campaign .portal-hero__content{width:min(660px,58%);max-width:660px;padding:20px clamp(22px,5.7vw,108px);padding-right:0;position:relative;z-index:2}
 .portal-hero--campaign .portal-kicker{font-size:9px;letter-spacing:2.4px;color:#d6b7ff}
