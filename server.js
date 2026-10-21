@@ -299,11 +299,19 @@ const server = http.createServer(async (req, res) => {
         (key(item.title).includes(titleKey) || titleKey.includes(key(item.title))) &&
         (key(item.artist).includes(artistKey) || artistKey.includes(key(item.artist)))) || null;
     let externalMatches = [];
-    // Songsterr is a free fallback for playable tab references; it does not expose full raw tabs here.
+    // Search providers automatically. Public search APIs may return metadata, not licensed raw chord sheets.
+    // Keep direct, query-specific links rather than pretending a search result is a full chord sheet.
     if (!chord) {
+      const query = `${title} ${artist}`.slice(0, 180);
+      const encodedQuery = encodeURIComponent(query);
+      const providerLinks = [
+        { title: "Cifra Club", artist, instrumentTracks: [instrument], url: `https://www.cifraclub.com.br/?q=${encodedQuery}`, provider: "Cifra Club" },
+        { title: "Ultimate Guitar", artist, instrumentTracks: [instrument], url: `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodedQuery}`, provider: "Ultimate Guitar" },
+        { title: "Songsterr", artist, instrumentTracks: [instrument], url: `https://www.songsterr.com/?pattern=${encodedQuery}`, provider: "Songsterr" },
+        { title: "Pesquisa na web", artist, instrumentTracks: [instrument], url: `https://www.google.com/search?q=${encodeURIComponent(query + " cifra acordes " + instrument)}`, provider: "Pesquisa na web" }
+      ];
       try {
-        const pattern = encodeURIComponent(`${title} ${artist}`.slice(0, 180));
-        const response = await fetch(`https://www.songsterr.com/api/songs?pattern=${pattern}`, {
+        const response = await fetch(`https://www.songsterr.com/api/songs?pattern=${encodedQuery}`, {
           headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
           signal: AbortSignal.timeout(7000)
         });
@@ -315,12 +323,13 @@ const server = http.createServer(async (req, res) => {
             const resultArtist = String(item.artist?.name || item.artistName || item.artist || "Artista não informado").slice(0, 160);
             const tracks = Array.isArray(item.tracks) ? item.tracks.map((track) => String(track.instrument || track.name || "")).filter(Boolean).slice(0, 8) : [];
             return { title: resultTitle, artist: resultArtist, instrumentTracks: tracks,
-              url: "https://www.songsterr.com/?pattern=" + encodeURIComponent(resultTitle + " " + resultArtist) };
+              url: "https://www.songsterr.com/?pattern=" + encodeURIComponent(resultTitle + " " + resultArtist), provider: "Songsterr" };
           });
         }
-      } catch { /* Keep the local catalog usable if the external service is unavailable. */ }
+      } catch { /* Provider links below remain available if the API is offline. */ }
+      const seenUrls = new Set(externalMatches.map((item) => item.url));
+      externalMatches.push(...providerLinks.filter((item) => !seenUrls.has(item.url)));
     }
-
     // Small, locally hosted starter catalog: chord progressions only (no copyrighted lyrics).
     // The page stays on Site Músicas and does not redirect users to a search engine.
     const normalizedTitle = key(title);
