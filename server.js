@@ -287,9 +287,39 @@ const server = http.createServer(async (req, res) => {
     const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
     const instrument = String(url.searchParams.get("instrument") || "Violão").trim().slice(0, 40);
     if (!title || !artist) return json(res, 400, { error: "Informe o título da música e o artista." });
-    const key = (value) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const key = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
+      .replace(/\\b(?:ao vivo|live|official audio|official video|videoclipe oficial|clipe oficial|lyrics|lyric video|acustico|acoustic|remasterizado|remastered)\\b/g, " ")
+      .replace(/\\s*[-–—|:]\\s*(?:ao vivo|live|official audio|official video|lyrics|acustico|acoustic).*$/g, " ")
+      .replace(/\\b(?:feat|ft|participacao)\\b.*$/g, " ")
+      .replace(/[^a-z0-9]+/g, " ").replace(/\\s+/g, " ").trim();
     const chords = await readJsonFile(chordsFile, []);
-    let chord = chords.find((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument)) || null;
+    const titleKey = key(title), artistKey = key(artist), instrumentKey = key(instrument);
+    let chord = chords.find((item) => key(item.title) === titleKey && key(item.artist) === artistKey && key(item.instrument) === instrumentKey) ||
+      chords.find((item) => key(item.instrument) === instrumentKey && key(item.title) && key(item.artist) &&
+        (key(item.title).includes(titleKey) || titleKey.includes(key(item.title))) &&
+        (key(item.artist).includes(artistKey) || artistKey.includes(key(item.artist)))) || null;
+    let externalMatches = [];
+    // Songsterr is a free fallback for playable tab references; it does not expose full raw tabs here.
+    if (!chord) {
+      try {
+        const pattern = encodeURIComponent(`${title} ${artist}`.slice(0, 180));
+        const response = await fetch(`https://www.songsterr.com/api/songs?pattern=${pattern}`, {
+          headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+          signal: AbortSignal.timeout(7000)
+        });
+        if (response.ok) {
+          const payload = await response.json();
+          const items = Array.isArray(payload) ? payload : Array.isArray(payload?.songs) ? payload.songs : [];
+          externalMatches = items.slice(0, 5).map((item) => {
+            const resultTitle = String(item.title || item.name || "Faixa sem título").slice(0, 200);
+            const resultArtist = String(item.artist?.name || item.artistName || item.artist || "Artista não informado").slice(0, 160);
+            const tracks = Array.isArray(item.tracks) ? item.tracks.map((track) => String(track.instrument || track.name || "")).filter(Boolean).slice(0, 8) : [];
+            return { title: resultTitle, artist: resultArtist, instrumentTracks: tracks,
+              url: "https://www.songsterr.com/a/wa/bestMatchForQueryStringPart?s=" + encodeURIComponent(resultTitle + " " + resultArtist) };
+          });
+        }
+      } catch { /* Keep the local catalog usable if the external service is unavailable. */ }
+    }
 
     // Small, locally hosted starter catalog: chord progressions only (no copyrighted lyrics).
     // The page stays on Site Músicas and does not redirect users to a search engine.
@@ -383,7 +413,7 @@ const server = http.createServer(async (req, res) => {
         updatedAt: "2026-10-21T00:00:00.000Z"
       };
     }
-    return json(res, 200, { chord, total: chords.length + (chord?.source === "catalogo-interno-referencia" ? 1 : 0) });
+    return json(res, 200, { chord, externalMatches, total: chords.length + (chord?.source === "catalogo-interno-referencia" ? 1 : 0) });
   }
   if (url.pathname === "/api/chords" && req.method === "POST") {
     try {
