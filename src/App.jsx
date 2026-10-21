@@ -9,8 +9,12 @@ const adaptChordContentForInstrument = (content, instrument, source = "") => {
   const text = String(content || "").trim();
   if (!text || ["Violão", "Guitarra"].includes(instrument)) return text;
   if (source === "catalogo-interno-referencia" || source === "guia-adaptado-de-referencia" || text.startsWith("REFERÊNCIA INTERNA SIMPLIFICADA")) return text;
-  const chordTokens = [...new Set((text.match(/\b[A-G](?:#|b)?(?:m|min|maj|sus|dim|aug|add)?[0-9]?(?:\/[A-G](?:#|b)?)?\b/g) || [])
-    .filter((token) => !/^(?:A|B|C|D|E|F|G)$/i.test(token)))].slice(0, 24);
+  // Read chord symbols from chord/section lines, and ignore tablature and lyric-only lines.
+  const chordSource = text.split("\n").filter((line) =>
+    !/^\s*[eEBGDA]\|[-0-9hpb~/\\-]{3,}/.test(line) &&
+    !/^\s*(?:GUIA |LINHA-GUIA|MÃO |COMPASSO|ESTROFE:|REFRÃO:|PONTE|Este |Use |Confira |Não é |Adapte |BATIDA )/i.test(line)
+  ).join("\n");
+  const chordTokens = [...new Set(chordSource.match(/(?:^|[\s|])([A-G](?:#|b)?(?:m|min|maj|sus|dim|aug|add)?[0-9]?(?:\/[A-G](?:#|b)?)?)(?=$|[\s|),])/gm)?.map((token) => token.trim()) || [])].slice(0, 24);
   const chordLine = chordTokens.length ? chordTokens.join(" · ") : "Não foi possível identificar acordes com segurança na referência.";
   const titleLine = "GUIA DE ESTUDO PARA " + instrument.toUpperCase();
   if (instrument === "Bateria") return [
