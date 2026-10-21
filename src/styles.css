@@ -1282,3 +1282,12 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 @keyframes shopMenuGlow{0%,100%{box-shadow:0 5px 16px #ffdb0030}50%{box-shadow:0 5px 22px #ffdb0090}}
 @media(max-width:900px){.portal-shop-feature{margin:24px 14px 32px;padding:22px}.portal-shop-feature__grid{grid-template-columns:repeat(2,minmax(0,1fr))}.portal-shop-product{min-height:190px}}
 @media(max-width:560px){.portal-shop-feature{padding:17px;border-radius:19px}.portal-shop-feature__heading{align-items:flex-start;flex-direction:column}.portal-shop-feature__all{width:100%;box-sizing:border-box}.portal-shop-feature__grid{gap:10px}.portal-shop-product{min-height:185px;padding:13px;border-radius:14px}.portal-shop-product__icon{width:62px;height:62px;right:12px;top:42px}.portal-shop-product__icon svg{width:32px;height:32px}.portal-shop-product strong{font-size:14px}.portal-shop-product small{font-size:10px}.portal-shop-product__tag{top:12px;left:12px;font-size:8px}.portal-shop-feature__note{text-align:left;line-height:1.5}}
+
+/* Footer legal pages: readable modal */
+.portal-legal-panel{width:min(760px,calc(100vw - 32px));max-width:760px;max-height:min(82vh,820px);overflow:auto;padding:clamp(22px,4vw,38px)}
+.portal-legal-panel h2{margin:10px 0 16px;font-size:clamp(25px,4vw,34px);letter-spacing:-.04em;color:#17152b}
+.portal-legal-panel h3{margin:23px 0 7px;font-size:15px;color:#27213d}
+.portal-legal-panel p{margin:8px 0;color:#5f5b70;font-size:13px;line-height:1.75}
+.portal-legal-panel .portal-kicker{font-size:10px;letter-spacing:.14em}
+.portal-legal-close{display:inline-flex;align-items:center;justify-content:center;margin-top:22px;min-height:44px;padding:0 22px;border:0;border-radius:10px;background:#ffdb00;color:#17152b;font-weight:850;cursor:pointer}
+@media(max-width:600px){.portal-legal-panel{padding:22px 18px}.portal-legal-panel h3{margin-top:18px}}
