@@ -298,6 +298,60 @@ const server = http.createServer(async (req, res) => {
       chords.find((item) => key(item.instrument) === instrumentKey && key(item.title) && key(item.artist) &&
         (key(item.title).includes(titleKey) || titleKey.includes(key(item.title))) &&
         (key(item.artist).includes(artistKey) || artistKey.includes(key(item.artist)))) || null;
+    // Adapt guitar-style chord/tab entries into instrument-appropriate study guides.
+    // Do not show a guitar tablature unchanged when another instrument is selected.
+    if (chord && !["violao", "guitarra"].includes(instrumentKey)) {
+      const originalContent = String(chord.content || "");
+      const hasGuitarTab = /(?:^|\\n)\\s*[eEBGDA]\\|[-0-9hpb~/\\-]{3,}/m.test(originalContent);
+      const hasSectionedChordSheet = /\\[(?:intro|verse|verso|chorus|refr[aã]o|bridge|ponte|solo)/i.test(originalContent);
+      if (hasGuitarTab || hasSectionedChordSheet) {
+        const chordNames = [...new Set((originalContent.match(/\\b[A-G](?:#|b)?(?:m|min|maj|sus|dim|aug|add)?[0-9]?(?:\\/[A-G](?:#|b)?)?\\b/g) || [])
+          .filter((name) => !/^(?:E|B|G|D|A)$/i.test(name) || !hasGuitarTab))].slice(0, 32);
+        const sections = [...originalContent.matchAll(/\\[([^\\]]+)\\]/g)].map((match) => match[1]).slice(0, 12);
+        let adapted = [];
+        if (instrumentKey === "baixo") {
+          adapted = [
+            "GUIA DE BAIXO DERIVADO DOS ACORDES DISPONÍVEIS",
+            "Use as fundamentais abaixo como ponto de partida; não é uma transcrição oficial da linha original.",
+            "NOTAS-GUIA: " + (chordNames.length ? chordNames.map((name) => name.replace(/m(?:in)?|maj|sus|dim|aug|add|[0-9]/g, "").split("/")[0]).join(" · ") : "acordes não identificados"),
+            "Pratique uma fundamental por mudança de acorde; acrescente oitavas e aproximações apenas se soarem bem."
+          ];
+        } else if (instrumentKey === "bateria") {
+          adapted = [
+            "GUIA RÍTMICO DE BATERIA · ESTUDO SUGERIDO",
+            "Os acordes da música não determinam a bateria original; este é um arranjo de estudo, não uma transcrição.",
+            "COMPASSO SUGERIDO: 4/4",
+            "ESTROFE: chimbal fechado em colcheias, bumbo leve e caixa nos tempos 2 e 4.",
+            "REFRÃO: aumente a intensidade, bumbo firme, caixa nos tempos 2 e 4 e prato nas entradas.",
+            "PONTE / FINAL: reduza a dinâmica e faça uma virada curta para a retomada."
+          ];
+        } else if (instrumentKey === "teclado" || instrumentKey === "piano") {
+          adapted = [
+            "GUIA DE TECLADO/PIANO DERIVADO DOS ACORDES DISPONÍVEIS",
+            "ACORDES IDENTIFICADOS: " + (chordNames.join(" · ") || "não identificados"),
+            "MÃO ESQUERDA: toque a fundamental ou oitavas.",
+            "MÃO DIREITA: monte tríades e inversões dos acordes identificados; mantenha notas comuns entre mudanças.",
+            "Este guia é uma adaptação de estudo, não uma transcrição oficial do arranjo."
+          ];
+        } else if (instrumentKey === "ukulele") {
+          adapted = [
+            "GUIA DE UKULELE DERIVADO DOS ACORDES DISPONÍVEIS",
+            "ACORDES A CONFERIR: " + (chordNames.join(" · ") || "não identificados"),
+            "Use formas de acorde compatíveis com a afinação G-C-E-A. Algumas inversões de guitarra podem precisar ser simplificadas.",
+            "BATIDA SUGERIDA: ↓ ↓↑ ↑↓↑, começando devagar.",
+            "Este guia precisa ser conferido com a versão da música."
+          ];
+        }
+        if (adapted.length) {
+          chord = { ...chord, instrument, content: [
+            "GUIA ADAPTADO PARA " + instrument.toUpperCase() + " — " + chord.title + " / " + chord.artist,
+            ...adapted,
+            sections.length ? "SEÇÕES DETECTADAS NA REFERÊNCIA: " + sections.join(" · ") : "",
+            "Aviso: material de estudo derivado da referência disponível; não garante reproduzir exatamente a gravação."
+          ].filter(Boolean).join("\\n"), source: "guia-adaptado-de-referencia" };
+        }
+      }
+    }
     let externalMatches = [];
     const providerDiagnostics = { local: chord ? "found" : "empty", cifraClub: "not_tried", ultimateGuitar: "not_tried", songsterr: "not_tried" };
     // Try the community Cifra Club adapter with slug and original-text variants.
