@@ -346,6 +346,37 @@ const server = http.createServer(async (req, res) => {
 
 
   if (req.method === "GET" && url.pathname === "/api/artists") {
+    const queryText = (url.searchParams.get("q") || "").trim().slice(0, 100);
+    const page = Math.max(1, Number.parseInt(url.searchParams.get("page") || "1", 10) || 1);
+    const limit = 100;
+    const offset = (page - 1) * limit;
+    const normalizeArtist = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
+    if (queryText.length >= 2) {
+      try {
+        const mbUrl = new URL("https://musicbrainz.org/ws/2/artist");
+        const safeQuery = queryText.replace(/["\\]/g, " ").replace(/\s+/g, " ").trim();
+        mbUrl.searchParams.set("query", `artist:"${safeQuery}"`);
+        mbUrl.searchParams.set("fmt", "json");
+        mbUrl.searchParams.set("limit", String(limit));
+        mbUrl.searchParams.set("offset", String(offset));
+        const response = await fetch(mbUrl, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
+        if (!response.ok) return json(res, 502, { error: "A busca de artistas está temporariamente indisponível.", items: [], total: 0, hasMore: false });
+        const payload = await response.json();
+        const items = (payload.artists || []).map((artist) => ({
+          id: `mb-artist-${artist.id}`,
+          name: artist.name || "Artista sem nome",
+          title: artist.name || "Artista sem nome",
+          genre: artist.tags?.sort((a, b) => (b.count || 0) - (a.count || 0))[0]?.name || "Artista",
+          country: artist.country || artist.area?.name || "",
+          disambiguation: artist.disambiguation || "",
+          provider: "MusicBrainz",
+          providerUrl: `https://musicbrainz.org/artist/${artist.id}`
+        }));
+        return json(res, 200, { items, total: Number(payload.count || items.length), page, limit, hasMore: offset + items.length < Number(payload.count || items.length), source: "MusicBrainz" });
+      } catch (error) {
+        return json(res, 502, { error: "Não foi possível consultar o catálogo de artistas agora. Tente novamente.", items: [], total: 0, hasMore: false });
+      }
+    }
     const catalog = [
       ["Gospel", ["Aline Barros","Fernandinho","Gabriela Rocha","Anderson Freire","Diante do Trono","Isadora Pompeo","Bruna Karla","Thalles Roberto","Casa Worship","Preto no Branco","Cassiane","Damares","Leandro Borges","Sarah Farias","Eli Soares","Samuel Messias","Kemilly Santos","Midian Lima","Eyshila","André Valadão"]],
       ["Sertanejo", ["Jorge & Mateus","Marília Mendonça","Gusttavo Lima","Henrique & Juliano","Maiara & Maraisa","Zezé Di Camargo & Luciano","Chitãozinho & Xororó","Bruno & Marrone","Michel Teló","Leonardo","Sérgio Reis","Luan Santana","Ana Castela","Zé Neto & Cristiano","Matheus & Kauan","Fernando & Sorocaba","João Bosco & Vinícius","Daniel","Edson & Hudson","Rio Negro & Solimões","Chrystian & Ralf","Guilherme & Benuto","Israel & Rodolffo","Lauana Prado","Simone Mendes","Naiara Azevedo","Felipe & Rodrigo","Hugo & Guilherme","Clayton & Romário","Murilo Huff"]],
@@ -362,7 +393,7 @@ const server = http.createServer(async (req, res) => {
       ["Jazz", ["João Gilberto","Hermeto Pascoal","Eliane Elias","Baden Powell","Azimuth","Leny Andrade","Hamilton de Holanda","João Donato","Dori Caymmi","Moacir Santos"]],
       ["Música Latina", ["Daniela Mercury","Ivete Sangalo","Anitta","Claudia Leitte","Ludmilla","Pabllo Vittar","Carlinhos Brown","Margareth Menezes","Alinne Rosa","Bell Marques"]]
     ];
-    const normalizeArtist = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+    const normalizeArtist = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     const unique = new Map();
     for (const [genre, names] of catalog) {
       for (const name of names) {
@@ -370,7 +401,8 @@ const server = http.createServer(async (req, res) => {
         if (!unique.has(key)) unique.set(key, { id: `artist-${key.replace(/ /g, "-")}`, name, title: name, genre, country: "BR", provider: "Catálogo de artistas brasileiros" });
       }
     }
-    return json(res, 200, { items: [...unique.values()], total: unique.size, source: "Catálogo editorial brasileiro", hasMore: false });
+    const items = [...unique.values()];
+    return json(res, 200, { items, total: items.length, page: 1, limit: items.length, hasMore: false, source: "Catálogo editorial brasileiro" });
   }
 
   if (req.method === "GET" && url.pathname === "/api/genre-artists") {
