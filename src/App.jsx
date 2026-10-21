@@ -252,6 +252,30 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [artistItems, setArtistItems] = useState([]);
   const [relatedItems, setRelatedItems] = useState([]);
   const [recommendationsLoading, setRecommendationsLoading] = useState(false);
+  const [songView, setSongView] = useState("lyrics");
+  const [instrument, setInstrument] = useState("Violão");
+  const [chordInput, setChordInput] = useState("");
+  const [transposeBy, setTransposeBy] = useState(0);
+  const [capo, setCapo] = useState(0);
+  const chordNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+  const chordAliases = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#", "A#": "A#", "D#": "D#", "G#": "G#" };
+  const transposeChordText = (text, steps) => String(text || "").replace(/\\b([A-G])([#b]?)(m|maj7|maj|min|dim|aug|sus2|sus4|sus|add9|m7|7M|7|9|11|13|°|ø)?(\\/[A-G][#b]?)?\\b/g, (whole, root, accidental, quality = "", bass = "") => {
+    const normalizedRoot = chordAliases[root + accidental] || (root + accidental);
+    const index = chordNames.indexOf(normalizedRoot);
+    if (index < 0) return whole;
+    const newRoot = chordNames[(index + steps + 120) % 12];
+    let newBass = bass;
+    if (bass) {
+      const match = bass.slice(1).match(/^([A-G])([#b]?)/);
+      if (match) {
+        const bassName = chordAliases[match[1] + match[2]] || (match[1] + match[2]);
+        const bassIndex = chordNames.indexOf(bassName);
+        if (bassIndex >= 0) newBass = "/" + chordNames[(bassIndex + steps + 120) % 12];
+      }
+    }
+    return newRoot + quality + newBass;
+  });
+  const transposedChords = transposeChordText(chordInput, transposeBy);
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -318,7 +342,31 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           </div>
         </section>
         <div className="reference-song-grid">
-          <section className="reference-lyrics-card"><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></section>
+          <section className="reference-lyrics-card reference-song-workspace">
+            <div className="reference-song-tabs" role="tablist" aria-label="Conteúdo da música">
+              <button type="button" role="tab" aria-selected={songView === "lyrics"} className={songView === "lyrics" ? "is-active" : ""} onClick={() => setSongView("lyrics")}><BookOpen size={16}/> Letra</button>
+              <button type="button" role="tab" aria-selected={songView === "chords"} className={songView === "chords" ? "is-active" : ""} onClick={() => setSongView("chords")}><Music2 size={16}/> Cifras e acordes</button>
+            </div>
+            {songView === "lyrics" ? <><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></> : <div className="reference-chords-panel">
+              <span className="portal-kicker">PARA QUEM TOCA</span>
+              <h2>Cifras de {lyrics.title}</h2>
+              <p className="reference-chords-intro">Escolha seu instrumento, procure a cifra desta música ou cole os acordes para transpor o tom.</p>
+              <div className="reference-instrument-picker" role="group" aria-label="Escolha o instrumento">
+                {["Violão","Guitarra","Teclado","Piano","Baixo","Bateria","Ukulele"].map((item) => <button type="button" key={item} className={instrument === item ? "is-active" : ""} onClick={() => setInstrument(item)}>{item === "Violão" ? "🎸" : item === "Guitarra" ? "🎸" : item === "Teclado" ? "🎹" : item === "Piano" ? "🎹" : item === "Baixo" ? "🎸" : item === "Bateria" ? "🥁" : "🪕"} <span>{item}</span></button>)}
+              </div>
+              <a className="reference-chords-search" href={"https://www.google.com/search?q=" + encodeURIComponent(lyrics.artist + " " + lyrics.title + " cifra " + instrument)} target="_blank" rel="noreferrer"><Search size={17}/> Buscar cifra de {instrument.toLowerCase()} na internet <ArrowRight size={16}/></a>
+              <div className="reference-chords-editor">
+                <label htmlFor="chord-input">Se já tiver os acordes, cole aqui</label>
+                <textarea id="chord-input" value={chordInput} onChange={(event) => { setChordInput(event.target.value); setTransposeBy(0); }} placeholder={"Ex.: Am  F  C  G\nCole aqui a sequência de acordes ou a cifra com a letra."} rows={4}/>
+                <div className="reference-chords-tools">
+                  <div className="reference-transpose-controls"><span>Transpor tom</span><button type="button" onClick={() => setTransposeBy((v) => Math.max(-11, v - 1))} aria-label="Baixar um semitom">−</button><strong>{transposeBy === 0 ? "Original" : transposeBy > 0 ? "+" + transposeBy + " semitom(ns)" : transposeBy + " semitom(ns)"}</strong><button type="button" onClick={() => setTransposeBy((v) => Math.min(11, v + 1))} aria-label="Subir um semitom">+</button><button type="button" onClick={() => setTransposeBy(0)}>Reset</button></div>
+                  <label className="reference-capo-control">Capotraste <select value={capo} onChange={(event) => setCapo(Number(event.target.value))}>{Array.from({length:13},(_,i)=><option key={i} value={i}>{i === 0 ? "Sem capotraste" : "Casa " + i}</option>)}</select></label>
+                </div>
+                {chordInput.trim() ? <div className="reference-transposed-output"><strong>{transposeBy === 0 ? "Seus acordes" : "Acordes transpostos"}</strong><pre>{transposedChords}</pre><button type="button" onClick={() => navigator.clipboard?.writeText(transposedChords)}>Copiar acordes</button></div> : <div className="reference-chords-note"><Music2 size={22}/><div><strong>Cifra ainda não cadastrada nesta página</strong><p>Para não mostrar acordes incorretos, procure uma cifra publicada para esta música usando o botão acima. Você também pode colar os acordes aqui e mudar o tom.</p></div></div>}
+                <div className="reference-instrument-tip"><strong>{instrument}:</strong> {instrument === "Bateria" ? "procure a levada, o andamento (BPM) e o padrão de viradas da música." : instrument === "Teclado" || instrument === "Piano" ? "procure os acordes com inversões, notas da mão direita e baixo da mão esquerda." : instrument === "Baixo" ? "procure as notas fundamentais, linhas de baixo e marcação rítmica." : "use o controle de transposição para adaptar os acordes ao seu tom confortável."}</div>
+              </div>
+            </div>}
+          </section>
           <section className="reference-video-column">
             <div className="reference-video-card"><h2>Vídeo relacionado</h2>
               {video ? <><div className="reference-video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId)}?rel=0${autoplayVideo ? "&autoplay=1" : ""}`} title={`${lyrics.title} — vídeo relacionado`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/></div><div className="reference-video-details"><strong>{video.title}</strong><span>{video.channel || lyrics.artist}</span><a href={youtubeUrl} target="_blank" rel="noreferrer">Assistir no YouTube <ArrowRight size={14}/></a></div></>
