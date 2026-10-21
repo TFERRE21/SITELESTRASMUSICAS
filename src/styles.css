@@ -757,3 +757,19 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 
 .portal-chart-source__name{display:block;flex:0 0 100%;margin-top:3px;font-weight:750;color:#8b6b2d}
 .portal-chart-source{flex-wrap:wrap}
+
+
+/* Correção crítica: não ocultar a <main> que contém a página da música. */
+.portal.portal--song-open>.portal-topline,
+.portal.portal--song-open>header.portal-header,
+.portal.portal--song-open>main#inicio,
+.portal.portal--song-open>footer.portal-footer{display:none!important}
+.portal.portal--song-open>.reference-site-header{display:block!important}
+.portal.portal--song-open>.reference-song-page{display:block!important;visibility:visible!important;min-height:60vh}
+.portal--song-open .reference-song-grid,
+.portal--song-open .reference-song-hero,
+.portal--song-open .reference-lyrics-card,
+.portal--song-open .reference-video-column{visibility:visible!important}
+.portal--song-open .reference-lyrics-card{min-height:260px}
+.portal--song-open .reference-lyrics-text{min-height:120px;white-space:pre-wrap;overflow-wrap:anywhere}
+.portal--song-open .reference-video-column{min-width:0}
