@@ -5,6 +5,48 @@ import { institutional } from "./config/institutional.js";
 const genres = ["Todos", "Gospel", "Sertanejo", "MPB", "Pop", "Rock", "Rap", "Funk", "Pagode", "Samba", "Forró", "Reggae", "Indie", "Jazz", "Música Latina"];
 const normalize = (v) => String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 
+const adaptChordContentForInstrument = (content, instrument, source = "") => {
+  const text = String(content || "").trim();
+  if (!text || ["Violão", "Guitarra"].includes(instrument)) return text;
+  if (source === "catalogo-interno-referencia" || source === "guia-adaptado-de-referencia" || text.startsWith("REFERÊNCIA INTERNA SIMPLIFICADA")) return text;
+  const chordTokens = [...new Set((text.match(/\b[A-G](?:#|b)?(?:m|min|maj|sus|dim|aug|add)?[0-9]?(?:\/[A-G](?:#|b)?)?\b/g) || [])
+    .filter((token) => !/^(?:A|B|C|D|E|F|G)$/i.test(token)))].slice(0, 24);
+  const chordLine = chordTokens.length ? chordTokens.join(" · ") : "Não foi possível identificar acordes com segurança na referência.";
+  const titleLine = "GUIA DE ESTUDO PARA " + instrument.toUpperCase();
+  if (instrument === "Bateria") return [
+    titleLine,
+    "Este é um guia rítmico sugerido; acordes não permitem recuperar a bateria original.",
+    "COMPASSO SUGERIDO: 4/4",
+    "ESTROFE: chimbal fechado em colcheias, bumbo leve e caixa nos tempos 2 e 4.",
+    "REFRÃO: bumbo firme, caixa nos tempos 2 e 4 e prato nas entradas.",
+    "PONTE: reduza a dinâmica e faça uma virada curta para retornar ao refrão.",
+    "Não é uma transcrição da gravação."
+  ].join("\n");
+  if (instrument === "Baixo") return [
+    titleLine,
+    "LINHA-GUIA DERIVADA DOS ACORDES, não uma transcrição oficial.",
+    "ACORDES / HARMONIA DETECTADOS: " + chordLine,
+    "Toque a nota fundamental de cada acorde no tempo; acrescente oitavas e aproximações apenas se combinarem com a banda.",
+    "Confira a tonalidade com a gravação antes de tocar."
+  ].join("\n");
+  if (instrument === "Teclado" || instrument === "Piano") return [
+    titleLine,
+    "ACORDES DETECTADOS NA REFERÊNCIA: " + chordLine,
+    "MÃO ESQUERDA: toque a fundamental ou oitavas.",
+    "MÃO DIREITA: forme tríades e experimente inversões, mantendo notas comuns entre as mudanças.",
+    "Guia simplificado de estudo, não uma transcrição oficial."
+  ].join("\n");
+  if (instrument === "Ukulele") return [
+    titleLine,
+    "ACORDES PARA CONFERIR: " + chordLine,
+    "Adapte as formas para a afinação G-C-E-A; simplifique acordes difíceis quando necessário.",
+    "BATIDA SUGERIDA: ↓ ↓↑ ↑↓↑, começando devagar.",
+    "Confira as formas e o tom antes de tocar."
+  ].join("\n");
+  return text;
+};
+
+
 function Cover({ item, index = 0, className = "" }) {
   const colors = ["#e9dffb", "#f8e2d8", "#dcecf7", "#f7edce", "#dcefe5", "#f4ddeb"];
   const image = item?.artworkUrl || item?.artworkUrl100;
@@ -295,7 +337,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
         if (cancelled) return;
         setExternalChordMatches(Array.isArray(data.externalMatches) ? data.externalMatches : []);
         if (data.chord) {
-          setChordInput(data.chord.content || "");
+          setChordInput(adaptChordContentForInstrument(data.chord.content || "", instrument, data.chord.source || ""));
           setChordCatalogStatus("found");
           setChordCatalogMessage("Cifra carregada do catálogo do Site Músicas.");
         } else {
