@@ -302,8 +302,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           setChordInput("");
           setChordCatalogStatus("empty");
           setChordCatalogMessage(data.externalMatches?.length
-            ? "Não há cifra completa cadastrada ainda, mas encontramos referências de tablaturas para esta música."
-            : "Não encontramos uma cifra completa no catálogo interno. Veja as referências abaixo ou salve uma cifra confiável para esta música.");
+            ? "Busca automática concluída: confira as fontes encontradas. A cifra só aparece aqui quando uma fonte autorizada fornece o conteúdo completo."
+            : "Não encontramos uma cifra completa disponível para exibir aqui. A busca automática reuniu fontes para consultar sem cadastrar música por música.");
         }
         setTransposeBy(0);
       })
@@ -332,7 +332,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
       } else {
         setChordCatalogStatus("empty");
         setChordCatalogMessage(data.externalMatches?.length
-          ? "Encontramos referências de tablaturas; a cifra completa ainda não está no catálogo interno."
+          ? "Busca automática concluída. As fontes encontradas podem ter cifras ou tablaturas; o conteúdo completo nem sempre pode ser importado para o site."
           : "Ainda não há cifra completa cadastrada. Use a referência abaixo ou salve uma cifra confiável.");
       }
     } catch (error) {
@@ -445,7 +445,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
               <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
               <section className="reference-chords-external" aria-label="Referências de tablaturas">
                 <h3>{uniqueExternalChordMatches.length ? "Referências encontradas" : "Pesquisar referências gratuitas"}</h3>
-                <p>{uniqueExternalChordMatches.length ? "Encontramos opções externas relacionadas. Confira o nome e o artista antes de abrir; essas referências não garantem que a cifra completa esteja disponível aqui." : "Ainda não há cifra completa no catálogo interno. Você pode pesquisar referências gratuitas ou cadastrar uma cifra que tenha autorização para publicar."}</p>
+                <p>{uniqueExternalChordMatches.length ? "Encontramos opções externas relacionadas. Confira o nome e o artista antes de abrir; essas referências não garantem que a cifra completa esteja disponível aqui." : "A busca automática reúne fontes gratuitas relacionadas à música. A cifra completa só será exibida aqui quando houver conteúdo disponível para uso autorizado."}</p>
                 {uniqueExternalChordMatches.length > 0 && <div className="reference-chords-external-list">{uniqueExternalChordMatches.map((match, index) => <article key={match.url + index}>
                   <div><strong>{match.title}</strong><span>{match.artist}</span>{match.instrumentTracks?.length > 0 && <small>Instrumentos: {match.instrumentTracks.join(", ")}</small>}</div>
                   <a href={match.url} target="_blank" rel="noreferrer">Abrir referência <ArrowRight size={14}/></a>
