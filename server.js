@@ -393,12 +393,11 @@ const server = http.createServer(async (req, res) => {
           found.set(normalized, { id: `mb-artist-${id}`, name, title: name, artist: genre, country: artist.country || "", disambiguation: artist.disambiguation || "", provider: "MusicBrainz", providerUrl: `https://musicbrainz.org/artist/${id}` });
         }
       }
-      let items = [...found.values()].slice(0, 30);
-      let source = "MusicBrainz";
-      if (!items.length) {
-        items = (curated[key] || []).map((name, index) => ({ id: `curated-${key}-${index}`, name, title: name, artist: genre, provider: "Seleção editorial", providerUrl: "" }));
-        source = "Seleção editorial";
-      }
+      const discovered = [...found.values()];
+      const editorial = (curated[key] || []).map((name, index) => ({ id: `curated-${key}-${index}`, name, title: name, artist: genre, provider: "Seleção editorial", providerUrl: "" }));
+      const seen = new Set(discovered.map((item) => norm(item.name)));
+      const items = [...discovered, ...editorial.filter((item) => !seen.has(norm(item.name)))].slice(0, 30);
+      const source = discovered.length && editorial.length ? "MusicBrainz + seleção editorial" : discovered.length ? "MusicBrainz" : editorial.length ? "Seleção editorial" : "MusicBrainz";
       return json(res, 200, { genre, items, total: items.length, source, note: items.length ? "" : "Não encontramos artistas para este gênero. Tente novamente mais tarde." });
     } catch (error) {
       const items = (curated[key] || []).map((name, index) => ({ id: `curated-${key}-${index}`, name, title: name, artist: genre, provider: "Seleção editorial", providerUrl: "" }));
