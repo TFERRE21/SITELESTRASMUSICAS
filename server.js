@@ -784,7 +784,12 @@ const server = http.createServer(async (req, res) => {
       const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
       searchUrl.searchParams.set("part", "snippet");
       searchUrl.searchParams.set("type", "video");
-      searchUrl.searchParams.set("maxResults", "5");
+      // Prefer videos that YouTube marks as embeddable, to avoid restricted players in the site.
+      searchUrl.searchParams.set("videoEmbeddable", "true");
+      searchUrl.searchParams.set("videoSyndicated", "true");
+      searchUrl.searchParams.set("regionCode", "BR");
+      searchUrl.searchParams.set("relevanceLanguage", "pt");
+      searchUrl.searchParams.set("maxResults", "10");
       searchUrl.searchParams.set("q", q);
       searchUrl.searchParams.set("key", apiKey);
       const response = await fetch(searchUrl, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
