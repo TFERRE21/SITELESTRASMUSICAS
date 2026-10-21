@@ -287,7 +287,7 @@ const server = http.createServer(async (req, res) => {
     const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
     const instrument = String(url.searchParams.get("instrument") || "Violão").trim().slice(0, 40);
     if (!title || !artist) return json(res, 400, { error: "Informe o título da música e o artista." });
-    const key = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase()
+    const key = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
       .replace(/\\b(?:ao vivo|live|official audio|official video|videoclipe oficial|clipe oficial|lyrics|lyric video|acustico|acoustic|remasterizado|remastered)\\b/g, " ")
       .replace(/\\s*[-–—|:]\\s*(?:ao vivo|live|official audio|official video|lyrics|acustico|acoustic).*$/g, " ")
       .replace(/\\b(?:feat|ft|participacao)\\b.*$/g, " ")
@@ -315,7 +315,7 @@ const server = http.createServer(async (req, res) => {
         if (response.ok) {
           const payload = await response.json();
           const raw = payload?.cifra ?? payload?.chords ?? payload?.content ?? payload?.tabs;
-          const content = Array.isArray(raw) ? raw.map((line) => String(line ?? "")).join("\\n") : typeof raw === "string" ? raw : "";
+          const content = Array.isArray(raw) ? raw.map((line) => String(line ?? "")).join("\n") : typeof raw === "string" ? raw : "";
           const returnedTitle = String(payload?.name || payload?.title || title).slice(0, 200);
           const returnedArtist = String(payload?.artist || artist).slice(0, 160);
           if (content.trim() && content.length <= 30000) {
@@ -336,7 +336,8 @@ const server = http.createServer(async (req, res) => {
     // Search providers automatically when no complete chord content was returned.
     if (!chord) {
       const query = `${title} ${artist}`.slice(0, 180);
-      const encodedQuery = encodeURIComponent(query);      const providerLinks = [
+      const encodedQuery = encodeURIComponent(query);
+      const providerLinks = [
         { title: "Cifra Club", artist, instrumentTracks: [instrument], url: `https://www.cifraclub.com.br/?q=${encodedQuery}`, provider: "Cifra Club" },
         { title: "Ultimate Guitar", artist, instrumentTracks: [instrument], url: `https://www.ultimate-guitar.com/search.php?search_type=title&value=${encodedQuery}`, provider: "Ultimate Guitar" },
         { title: "Songsterr", artist, instrumentTracks: [instrument], url: `https://www.songsterr.com/?pattern=${encodedQuery}`, provider: "Songsterr" },
