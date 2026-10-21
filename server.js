@@ -348,7 +348,7 @@ const server = http.createServer(async (req, res) => {
             ...adapted,
             sections.length ? "SEÇÕES DETECTADAS NA REFERÊNCIA: " + sections.join(" · ") : "",
             "Aviso: material de estudo derivado da referência disponível; não garante reproduzir exatamente a gravação."
-          ].filter(Boolean).join("\\n"), source: "guia-adaptado-de-referencia" };
+          ].filter(Boolean).join("\n"), source: "guia-adaptado-de-referencia" };
         }
       }
     }
