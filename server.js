@@ -288,10 +288,10 @@ const server = http.createServer(async (req, res) => {
     const instrument = String(url.searchParams.get("instrument") || "Violão").trim().slice(0, 40);
     if (!title || !artist) return json(res, 400, { error: "Informe o título da música e o artista." });
     const key = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-      .replace(/\\b(?:ao vivo|live|official audio|official video|videoclipe oficial|clipe oficial|lyrics|lyric video|acustico|acoustic|remasterizado|remastered)\\b/g, " ")
-      .replace(/\\s*[-–—|:]\\s*(?:ao vivo|live|official audio|official video|lyrics|acustico|acoustic).*$/g, " ")
-      .replace(/\\b(?:feat|ft|participacao)\\b.*$/g, " ")
-      .replace(/[^a-z0-9]+/g, " ").replace(/\\s+/g, " ").trim();
+      .replace(/\b(?:ao vivo|live|official audio|official video|videoclipe oficial|clipe oficial|lyrics|lyric video|acustico|acoustic|remasterizado|remastered)\b/g, " ")
+      .replace(/\s*[-–—|:]\s*(?:ao vivo|live|official audio|official video|lyrics|acustico|acoustic).*$/g, " ")
+      .replace(/\b(?:feat|ft|participacao)\b.*$/g, " ")
+      .replace(/[^a-z0-9]+/g, " ").replace(/\s+/g, " ").trim();
     const chords = await readJsonFile(chordsFile, []);
     const titleKey = key(title), artistKey = key(artist), instrumentKey = key(instrument);
     let chord = chords.find((item) => key(item.title) === titleKey && key(item.artist) === artistKey && key(item.instrument) === instrumentKey) ||
@@ -302,7 +302,7 @@ const server = http.createServer(async (req, res) => {
     // Try the community Cifra Club adapter with slug and original-text variants.
     // This adapter is unofficial; accept only actual chord text and reject unrelated results.
     if (!chord) {
-      const slug = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "")
+      const slug = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "")
         .toLowerCase().replace(/&/g, " e ").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 120);
       const candidates = [
         { artist: slug(artist), song: slug(title) },
@@ -333,7 +333,7 @@ const server = http.createServer(async (req, res) => {
               if (typeof line === "string") return line;
               if (line && typeof line === "object") return [line.chord, line.text, line.lyric].filter(Boolean).join(" ");
               return "";
-            }).join("\\n") : typeof raw === "string" ? raw : "";
+            }).join("\n") : typeof raw === "string" ? raw : "";
             const returnedTitle = String(record?.name || record?.title || title).slice(0, 200);
             const returnedArtist = String(record?.artist?.name || record?.artist || artist).slice(0, 160);
             const titleMatch = key(returnedTitle) === titleKey || key(returnedTitle).includes(titleKey) || titleKey.includes(key(returnedTitle));
@@ -386,7 +386,7 @@ const server = http.createServer(async (req, res) => {
                 new Promise((_, reject) => setTimeout(() => reject(new Error("Ultimate Guitar fetch timeout")), 9000))
               ]);
               const body = detail?.response ?? detail?.contentText ?? detail?.content ?? detail?.tab?.contentText ?? "";
-              const content = typeof body === "string" ? body.trim() : Array.isArray(body) ? body.map(String).join("\\n").trim() : "";
+              const content = typeof body === "string" ? body.trim() : Array.isArray(body) ? body.map(String).join("\n").trim() : "";
               const candidateTitle = String(candidate.song_name || candidate.songName || candidate.title || title).slice(0, 200);
               const candidateArtist = String(candidate.artist_name || candidate.artistName || candidate.band_name || artist).slice(0, 160);
               const candidateTitleTokens = key(candidateTitle).split(" ").filter(Boolean);
