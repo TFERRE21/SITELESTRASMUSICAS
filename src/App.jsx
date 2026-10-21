@@ -890,6 +890,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
   const navigateSection = (section) => {
+    if (section === "loja") { window.location.href = "https://meli.la/27Zigov"; return; }
     setLyrics(null); setVideo(null); setVideoError(""); setGenreRoute(""); setGenrePage("");
     setSectionRoute(section === "home" ? "" : section);
     const path = section === "home" ? "/" : `/${section}`;
