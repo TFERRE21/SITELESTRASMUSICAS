@@ -257,6 +257,9 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [chordInput, setChordInput] = useState("");
   const [transposeBy, setTransposeBy] = useState(0);
   const [capo, setCapo] = useState(0);
+  const [chordCatalogStatus, setChordCatalogStatus] = useState("idle");
+  const [chordCatalogMessage, setChordCatalogMessage] = useState("");
+  const [savingChord, setSavingChord] = useState(false);
   const chordNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const chordAliases = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#", "A#": "A#", "D#": "D#", "G#": "G#" };
   const transposeChordText = (text, steps) => String(text || "").replace(/\b([A-G])([#b]?)(maj7|maj|min|m7|m|dim|aug|sus2|sus4|sus|add9|7M|7|9|11|13|°|ø)?(\/[A-G][#b]?)?\b/g, (whole, root, accidental, quality = "", bass = "") => {
@@ -276,6 +279,58 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
     return newRoot + quality + newBass;
   });
   const transposedChords = transposeChordText(chordInput, transposeBy);
+  useEffect(() => {
+    if (songView !== "chords" || !lyrics?.title || !lyrics?.artist) return;
+    let cancelled = false;
+    setChordCatalogStatus("loading");
+    setChordCatalogMessage("");
+    fetch(`/api/chords?title=${encodeURIComponent(lyrics.title)}&artist=${encodeURIComponent(lyrics.artist)}&instrument=${encodeURIComponent(instrument)}`)
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível consultar as cifras do site.");
+        if (cancelled) return;
+        if (data.chord) {
+          setChordInput(data.chord.content || "");
+          setChordCatalogStatus("found");
+          setChordCatalogMessage("Cifra carregada do catálogo do Som & Letra.");
+        } else {
+          setChordInput("");
+          setChordCatalogStatus("empty");
+          setChordCatalogMessage("Esta música ainda não tem cifra cadastrada no catálogo interno.");
+        }
+        setTransposeBy(0);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setChordCatalogStatus("error");
+        setChordCatalogMessage(error.message || "Falha ao carregar o catálogo interno.");
+      });
+    return () => { cancelled = true; };
+  }, [songView, lyrics?.title, lyrics?.artist, instrument]);
+
+  const publishChordToCatalog = async () => {
+    if (!chordInput.trim()) {
+      setChordCatalogMessage("Cole a cifra ou os acordes antes de publicar.");
+      return;
+    }
+    setSavingChord(true);
+    setChordCatalogMessage("");
+    try {
+      const response = await fetch("/api/chords", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: lyrics.title, artist: lyrics.artist, instrument, content: chordInput.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível salvar a cifra.");
+      setChordCatalogStatus("found");
+      setChordCatalogMessage("Cifra publicada no catálogo do Som & Letra e disponível nesta música.");
+    } catch (error) {
+      setChordCatalogMessage(error.message || "Não foi possível salvar a cifra.");
+    } finally {
+      setSavingChord(false);
+    }
+  };
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
@@ -350,11 +405,11 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
             {songView === "lyrics" ? <><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></> : <div className="reference-chords-panel">
               <span className="portal-kicker">PARA QUEM TOCA</span>
               <h2>Cifras de {lyrics.title}</h2>
-              <p className="reference-chords-intro">Escolha seu instrumento, procure a cifra desta música ou cole os acordes para transpor o tom.</p>
+              <p className="reference-chords-intro">Escolha o instrumento e veja a cifra aqui mesmo no Som & Letra. Você também pode contribuir com uma cifra para o catálogo interno.</p>
               <div className="reference-instrument-picker" role="group" aria-label="Escolha o instrumento">
                 {["Violão","Guitarra","Teclado","Piano","Baixo","Bateria","Ukulele"].map((item) => <button type="button" key={item} className={instrument === item ? "is-active" : ""} onClick={() => setInstrument(item)}>{item === "Violão" ? "🎸" : item === "Guitarra" ? "🎸" : item === "Teclado" ? "🎹" : item === "Piano" ? "🎹" : item === "Baixo" ? "🎸" : item === "Bateria" ? "🥁" : "🪕"} <span>{item}</span></button>)}
               </div>
-              <a className="reference-chords-search" href={"https://www.google.com/search?q=" + encodeURIComponent(lyrics.artist + " " + lyrics.title + " cifra " + instrument)} target="_blank" rel="noreferrer"><Search size={17}/> Buscar cifra de {instrument.toLowerCase()} na internet <ArrowRight size={16}/></a>
+              <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
               <div className="reference-chords-editor">
                 <label htmlFor="chord-input">Se já tiver os acordes, cole aqui</label>
                 <textarea id="chord-input" value={chordInput} onChange={(event) => { setChordInput(event.target.value); setTransposeBy(0); }} placeholder={"Ex.: Am  F  C  G\nCole aqui a sequência de acordes ou a cifra com a letra."} rows={4}/>
@@ -362,7 +417,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
                   <div className="reference-transpose-controls"><span>Transpor tom</span><button type="button" onClick={() => setTransposeBy((v) => Math.max(-11, v - 1))} aria-label="Baixar um semitom">−</button><strong>{transposeBy === 0 ? "Original" : transposeBy > 0 ? "+" + transposeBy + " semitom(ns)" : transposeBy + " semitom(ns)"}</strong><button type="button" onClick={() => setTransposeBy((v) => Math.min(11, v + 1))} aria-label="Subir um semitom">+</button><button type="button" onClick={() => setTransposeBy(0)}>Reset</button></div>
                   <label className="reference-capo-control">Capotraste <select value={capo} onChange={(event) => setCapo(Number(event.target.value))}>{Array.from({length:13},(_,i)=><option key={i} value={i}>{i === 0 ? "Sem capotraste" : "Casa " + i}</option>)}</select></label>
                 </div>
-                {chordInput.trim() ? <div className="reference-transposed-output"><strong>{transposeBy === 0 ? "Seus acordes" : "Acordes transpostos"}</strong><pre>{transposedChords}</pre><button type="button" onClick={() => navigator.clipboard?.writeText(transposedChords)}>Copiar acordes</button></div> : <div className="reference-chords-note"><Music2 size={22}/><div><strong>Cifra ainda não cadastrada nesta página</strong><p>Para não mostrar acordes incorretos, procure uma cifra publicada para esta música usando o botão acima. Você também pode colar os acordes aqui e mudar o tom.</p></div></div>}
+                {chordInput.trim() ? <div className="reference-transposed-output"><strong>{transposeBy === 0 ? "Seus acordes" : "Acordes transpostos"}</strong><pre>{transposedChords}</pre><button type="button" onClick={() => navigator.clipboard?.writeText(transposedChords)}>Copiar acordes</button></div> : <div className="reference-chords-note"><Music2 size={22}/><div><strong>Cifra ainda não cadastrada no site</strong><p>O catálogo interno não encontrou acordes para esta combinação de música e instrumento. Se você tiver a cifra, cole acima e publique para que ela apareça aqui nas próximas visitas.</p></div></div>}
+                <div className="reference-chords-publish"><button type="button" onClick={publishChordToCatalog} disabled={savingChord || !chordInput.trim()}>{savingChord ? "Publicando..." : "Salvar cifra no Som & Letra"}</button><small>Ao publicar, a cifra fica disponível no catálogo interno desta música e instrumento.</small></div>
                 <div className="reference-instrument-tip"><strong>{instrument}:</strong> {instrument === "Bateria" ? "procure a levada, o andamento (BPM) e o padrão de viradas da música." : instrument === "Teclado" || instrument === "Piano" ? "procure os acordes com inversões, notas da mão direita e baixo da mão esquerda." : instrument === "Baixo" ? "procure as notas fundamentais, linhas de baixo e marcação rítmica." : "use o controle de transposição para adaptar os acordes ao seu tom confortável."}</div>
               </div>
             </div>}
