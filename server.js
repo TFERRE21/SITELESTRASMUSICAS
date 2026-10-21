@@ -154,7 +154,7 @@ async function lyricsOvh(title, artist) {
   const titles = [...new Set([String(title).trim(), cleanTitle(title)].filter(Boolean))];
   const artists = [...new Set([String(artist).trim(), cleanArtist(artist)].filter(Boolean))];
   // Also try featured artists parsed from the track title/artist metadata.
-  const featured = String(title + " " + artist).match(/\b(?:feat\.?|ft\.?|part\.?|participação)\s+([^\])]+?)(?=\]|\)|$)/i)?.[1]?.trim();
+  const featured = String(title + " " + artist).match(/\b(?:feat\.?|ft\.?|part\.?|participação)\s+([^)\]]+)/i)?.[1]?.trim();
   if (featured) artists.push(featured);
   for (const candidateArtist of [...new Set(artists)]) {
     for (const candidateTitle of titles) {
