@@ -68,6 +68,7 @@ export default function App() {
   const [genre, setGenre] = useState("Todos");
   const [results, setResults] = useState([]);
   const [chart, setChart] = useState([]);
+  const [globalChart, setGlobalChart] = useState([]);
   const [chartSource, setChartSource] = useState("");
   const [chartNote, setChartNote] = useState("");
   const [country, setCountry] = useState("br");
@@ -119,17 +120,20 @@ export default function App() {
 
   useEffect(() => {
     let active = true;
-    fetch(`/api/charts?country=${country}`).then(async (r) => {
-      const data = await r.json();
-      if (!r.ok) throw new Error(data.error || "Ranking indisponível.");
-      if (active) {
-        setChart(Array.isArray(data.items) ? data.items : []);
-        setChartSource(data.source || "");
-        setChartNote(data.note || "");
-      }
-    }).catch(() => { if (active) { setChart([]); setChartSource(""); setChartNote(""); } });
+    Promise.all([
+      fetch("/api/charts?country=br").then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Ranking Brasil indisponível."); return data; }),
+      fetch("/api/charts?country=us").then(async (r) => { const data = await r.json(); if (!r.ok) throw new Error(data.error || "Ranking global indisponível."); return data; })
+    ]).then(([br, global]) => {
+      if (!active) return;
+      setChart(Array.isArray(br.items) ? br.items : []);
+      setGlobalChart(Array.isArray(global.items) ? global.items : []);
+      setChartSource([br.source, global.source].filter(Boolean).join(" · "));
+      setChartNote(br.note || global.note || "");
+    }).catch(() => {
+      if (active) { setChart([]); setGlobalChart([]); setChartSource(""); setChartNote(""); }
+    });
     return () => { active = false; };
-  }, [country]);
+  }, []);
 
   const search = async (term, nextPage = 1) => {
     const clean = term.trim();
@@ -245,7 +249,8 @@ export default function App() {
     return () => window.removeEventListener("popstate", openFromAddress);
   }, []);
 
-  const visibleChart = useMemo(() => chart.slice(0, 10), [chart]);
+  const visibleChart = useMemo(() => chart.slice(0, 5), [chart]);
+  const visibleGlobalChart = useMemo(() => globalChart.slice(0, 5), [globalChart]);
   const toggleSaved = (item) => { setSaved((old) => { const next = old.some((x) => x.id === item.id) ? old.filter((x) => x.id !== item.id) : [...old, item]; const token = window.localStorage.getItem("somletra_token"); if (token) fetch("/api/account/favorites", { method: "PUT", headers: { "Content-Type": "application/json", Authorization: "Bearer " + token }, body: JSON.stringify({ favorites: next }) }).then(async (r) => { if (!r.ok) { const d = await r.json(); setMessage(d.error || "Não foi possível sincronizar os favoritos."); } }).catch(() => setMessage("Não foi possível sincronizar os favoritos.")); else setMessage("Entre em Meus Dados para manter seus favoritos salvos na conta."); return next; }); };
   const submitAuth = async (event) => { event.preventDefault(); setAuthBusy(true); setAuthError(""); try { const response = await fetch(authMode === "register" ? "/api/auth/register" : "/api/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name: authName, email: authEmail, password: authPassword }) }); const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível autenticar."); window.localStorage.setItem("somletra_token", data.token); setAccount(data.user); setSaved(data.user.favorites || []); setAuthPassword(""); } catch (error) { setAuthError(error.message || "Falha ao conectar."); } finally { setAuthBusy(false); } };
   const signOut = async () => { const token = window.localStorage.getItem("somletra_token"); if (token) await fetch("/api/auth/logout", { method: "POST", headers: { Authorization: "Bearer " + token } }).catch(() => {}); window.localStorage.removeItem("somletra_token"); setAccount(null); setSaved([]); setAuthMode("login"); };
@@ -399,19 +404,22 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
         </aside>
         <div className="portal-home-center">
           <section className="portal-ranking-panel" id="destaques">
-            <div className="portal-section-heading"><div><span className="portal-kicker">RANKINGS MUSICAIS</span><h2>Em alta agora.</h2><p>Top 10 por região, com base nas atualizações identificadas.</p></div><div className="portal-tabs"><button className={country === "br" ? "active" : ""} onClick={() => setCountry("br")}>🇧🇷 Brasil</button><button className={country === "us" ? "active" : ""} onClick={() => setCountry("us")}>🌐 Global</button></div></div>
+            <div className="portal-section-heading"><div><span className="portal-kicker">RANKINGS MUSICAIS</span><h2>Em alta agora.</h2><p>Top 10 por região, com base nas atualizações identificadas.</p></div><div className="portal-tabs"><span className="active">🇧🇷 Brasil</span><span>🌐 Global</span></div></div>
             <p className="portal-chart-source"><span className="portal-chart-source__info">ⓘ</span> {chartNote || "Os dados refletem a popularidade da fonte musical consultada e podem ter atualizações periódicas."}{chartSource ? <span className="portal-chart-source__name">Fonte: {chartSource}</span> : null}</p>
-            {visibleChart.length ? <div className="portal-ranking-list">{visibleChart.slice(0,10).map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{String(i+1).padStart(2,"0")}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><ChevronRight size={15}/></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={20}/><span>O ranking não está disponível neste momento. Tente novamente mais tarde.</span></div>}
+            <div className="portal-ranking-columns">
+              <section className="portal-ranking-country"><h3>Top 10 Brasil</h3>{visibleChart.length ? <div className="portal-ranking-list">{visibleChart.map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{i+1}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><span className="portal-ranking-trend" aria-label="posição no ranking">↑</span></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={18}/><span>Ranking Brasil indisponível no momento.</span></div>}</section>
+              <section className="portal-ranking-country"><h3>Top 10 Global</h3>{visibleGlobalChart.length ? <div className="portal-ranking-list">{visibleGlobalChart.map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{i+1}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i+5}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><span className="portal-ranking-trend" aria-label="posição no ranking">↑</span></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={18}/><span>Ranking global indisponível no momento.</span></div>}</section>
+            </div>
           </section>
-          <section className="portal-genres portal-genres--compact" id="generos"><div className="portal-section-heading"><div><span className="portal-kicker">EXPLORE POR ESTILO</span><h2>Qual é o seu som?</h2><p>Escolha um gênero e descubra músicas relacionadas quando disponíveis.</p></div></div><div className="portal-genre-grid">{genres.filter((g)=>g!=="Todos").map((g,i)=><button key={g} className="portal-genre" onClick={()=>{setGenre(g);setQuery(g);search(g,1);}}><span className={`portal-genre__icon portal-genre__icon--${i%6}`}>{i%3===0?<Headphones size={17}/>:i%3===1?<Music2 size={17}/>:<Disc3 size={17}/>}</span><span>{g}</span><ArrowRight size={14}/></button>)}</div></section>
         </div>
         <aside className="portal-home-right">
-          <article className="portal-premium-card portal-discover-card"><div className="portal-premium-card__art" aria-hidden="true"></div><div className="portal-premium-card__copy"><h2><Music2 size={17}/> Sua próxima música favorita</h2><p>Explore artistas, encontre letras e descubra novos sons sem planos ou cobranças.</p><button onClick={()=>document.querySelector(".portal-hero .portal-search input")?.focus()}>Explorar músicas <ArrowRight size={15}/></button></div></article>
+          <article className="portal-premium-card portal-discover-card"><div className="portal-premium-card__art" aria-hidden="true"></div><div className="portal-premium-card__copy"><h2><Crown size={19}/> Descubra novos sons</h2><p>Encontre letras, artistas e músicas que combinam com você.</p><button onClick={()=>document.querySelector(".portal-hero .portal-search input")?.focus()}>Conheça o catálogo <ArrowRight size={15}/></button></div></article>
           <section className="portal-featured-artists" id="artistas-em-destaque"><div className="portal-mini-heading"><span className="portal-kicker">ARTISTAS EM DESTAQUE</span><button onClick={()=>{setQuery("artistas");document.querySelector(".portal-hero .portal-search input")?.focus();}}>Ver todos <ArrowRight size={14}/></button></div>
             {(() => { const unique=[]; for(const item of [...results,...chart]) { const name=item.artist || item.artistName; if(name && !unique.some(a=>normalize(a.name)===normalize(name))) unique.push({name,artworkUrl:item.artworkUrl || item.artworkUrl100}); if(unique.length===5) break; } return unique.length ? <div className="portal-artist-cards">{unique.map((artist,i)=><button key={artist.name} onClick={()=>{setQuery(artist.name);search(artist.name,1);}}><Cover item={{title:artist.name,artworkUrl:artist.artworkUrl}} index={i}/><strong>{artist.name}</strong></button>)}</div> : <div className="portal-artists-empty"><Mic2 size={23}/><p>Pesquise uma música para descobrir artistas disponíveis no catálogo.</p><button onClick={()=>document.querySelector(".portal-hero .portal-search input")?.focus()}>Buscar artistas</button></div>; })()}
           </section>
         </aside>
       </section>
+      <section className="portal-genres portal-genres--compact portal-genres--reference" id="generos"><div className="portal-section-heading"><div><h2>Principais gêneros musicais</h2></div><button className="portal-text-button" onClick={()=>document.querySelector(".portal-hero .portal-search input")?.focus()}>Ver todos <ArrowRight size={14}/></button></div><div className="portal-genre-grid">{["Gospel","Sertanejo","MPB","Pop","Rock","Rap","Funk","Pagode","Samba","Forró"].map((g,i)=><button key={g} className={`portal-genre portal-genre--reference portal-genre--tile-${i}`} onClick={()=>{setGenre(g);setQuery(g);search(g,1);}}><span className={`portal-genre__icon portal-genre__icon--${i%6}`}>{i===0?"✝":i===1?"♧":i===2?"♫":i===3?"☆":i===4?"♆":i===5?"♬":i===6?"♛":i===7?"◉":i===8?"▤":"▥"}</span><span>{g}</span></button>)}</div></section>
     </main>
     <footer className="portal-footer reference-footer"><div className="reference-footer__grid"><div className="reference-footer__brand"><a className="portal-brand" href="#inicio"><span className="portal-brand__mark"><Music2 size={25} fill="currentColor"/></span><span>Site <span className="portal-brand__yellow">Músicas</span><small className="portal-brand__tagline">LETRAS QUE TOCAM VOCÊ</small></span></a><p>Descubra as músicas que fazem parte da sua história.</p></div><div><h3>Navegação</h3><nav><a href="#inicio">Início</a><a href="#busca">Letras</a><a href="#artistas">Artistas</a><a href="#generos">Álbuns e playlists</a><a href="#destaques">Em Alta</a></nav></div><div><h3>Suporte</h3><nav><a href="#ajuda" onClick={(e)=>{e.preventDefault();setSupportOpen(true);}}>Ajuda</a><a href="#ajuda" onClick={(e)=>{e.preventDefault();setSupportOpen(true);}}>Fale Conosco</a><a href="#termos">Termos de Uso</a><a href="#privacidade">Política de Privacidade</a></nav></div><div><h3>Siga-nos</h3><div className="reference-social-links"><a href="https://www.youtube.com/" target="_blank" rel="noreferrer" aria-label="YouTube"><Youtube/></a><a href="https://www.instagram.com/" target="_blank" rel="noreferrer" aria-label="Instagram">◎</a><a href="https://www.facebook.com/" target="_blank" rel="noreferrer" aria-label="Facebook">f</a><a href="https://www.tiktok.com/" target="_blank" rel="noreferrer" aria-label="TikTok">♪</a></div></div><div><h3>Receba novidades</h3><form className="reference-newsletter" onSubmit={(e)=>{e.preventDefault();setNewsletterNotice("Cadastro ainda não ativado: falta configurar um serviço de envio de e-mails.");}}><input type="email" required placeholder="Seu e-mail" aria-label="Seu e-mail"/><button>Cadastro</button></form>{newsletterNotice && <small className="reference-newsletter-notice">{newsletterNotice}</small>}</div></div><div className="portal-footer__bottom"><span>© {new Date().getFullYear()} Site Músicas. Todos os direitos reservados.</span><span>Dados e letras exibidos conforme disponibilidade das fontes e autorizações aplicáveis.</span></div></footer>
 
