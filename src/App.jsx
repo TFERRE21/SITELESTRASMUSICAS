@@ -117,22 +117,61 @@ function SiteSectionPage({ section, chart, globalChart, onNavigate, onGenre, onS
   const [artistCatalog, setArtistCatalog] = useState([]);
   const [artistCatalogLoading, setArtistCatalogLoading] = useState(false);
   const [artistCatalogError, setArtistCatalogError] = useState("");
+  const [artistCatalogPage, setArtistCatalogPage] = useState(1);
+  const [artistCatalogHasMore, setArtistCatalogHasMore] = useState(false);
+  const [artistCatalogTotal, setArtistCatalogTotal] = useState(0);
   useEffect(() => {
     if (section !== "artistas") return;
     let cancelled = false;
+    const query = term.trim();
+    const timer = setTimeout(async () => {
+      setArtistCatalogLoading(true);
+      setArtistCatalogError("");
+      setArtistCatalogPage(1);
+      try {
+        const url = query.length >= 2 ? `/api/artists?q=${encodeURIComponent(query)}&page=1` : "/api/artists";
+        const response = await fetch(url);
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível carregar os artistas.");
+        if (cancelled) return;
+        setArtistCatalog(Array.isArray(data.items) ? data.items : []);
+        setArtistCatalogTotal(Number(data.total || 0));
+        setArtistCatalogHasMore(Boolean(data.hasMore));
+      } catch (error) {
+        if (!cancelled) {
+          setArtistCatalogError(error.message || "Erro ao carregar artistas.");
+          setArtistCatalog([]);
+          setArtistCatalogTotal(0);
+          setArtistCatalogHasMore(false);
+        }
+      } finally {
+        if (!cancelled) setArtistCatalogLoading(false);
+      }
+    }, query.length >= 2 ? 350 : 0);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [section, term]);
+  const loadMoreArtists = async () => {
+    if (artistCatalogLoading || !artistCatalogHasMore) return;
+    const nextPage = artistCatalogPage + 1;
     setArtistCatalogLoading(true);
     setArtistCatalogError("");
-    fetch("/api/artists")
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || "Não foi possível carregar o catálogo de artistas.");
-        return data;
-      })
-      .then((data) => { if (!cancelled) setArtistCatalog(Array.isArray(data.items) ? data.items : []); })
-      .catch((error) => { if (!cancelled) setArtistCatalogError(error.message || "Erro ao carregar artistas."); })
-      .finally(() => { if (!cancelled) setArtistCatalogLoading(false); });
-    return () => { cancelled = true; };
-  }, [section]);
+    try {
+      const response = await fetch(`/api/artists?q=${encodeURIComponent(term.trim())}&page=${nextPage}`);
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível carregar mais artistas.");
+      setArtistCatalog((current) => {
+        const known = new Set(current.map((artist) => normalize(artist.name)));
+        return [...current, ...(data.items || []).filter((artist) => !known.has(normalize(artist.name)))];
+      });
+      setArtistCatalogPage(nextPage);
+      setArtistCatalogTotal(Number(data.total || artistCatalogTotal));
+      setArtistCatalogHasMore(Boolean(data.hasMore));
+    } catch (error) {
+      setArtistCatalogError(error.message || "Erro ao carregar mais artistas.");
+    } finally {
+      setArtistCatalogLoading(false);
+    }
+  };
   const songs = section === "em-alta" ? [...chart, ...globalChart] : chart;
   const artists = [];
   for (const item of [...chart, ...globalChart]) {
@@ -174,7 +213,7 @@ function SiteSectionPage({ section, chart, globalChart, onNavigate, onGenre, onS
     </header>
     <main className="section-page-content">
       {section === "generos" && <><div className="section-page-heading"><h2>Escolha seu gênero musical</h2><p>Abra uma página dedicada para conhecer os artistas de cada estilo.</p></div><div className="section-page-genre-grid">{genresToShow.map((name, index) => <button key={name} onClick={() => onGenre(name)}><span>{["✝","♫","♪","☆","♬","♩","◉","▤"][index%8]}</span><strong>{name}</strong><small>Ver artistas <ChevronRight size={14}/></small></button>)}</div></>}
-      {section === "artistas" && <><div className="section-page-heading"><h2>Todos os artistas</h2><p>{artistCatalogLoading ? "Carregando o catálogo completo de artistas brasileiros..." : `${allArtists.length} artistas no catálogo. Use a busca para filtrar por nome.`}</p></div><div className="section-page-catalog-filter"><Search size={18}/><input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Filtrar artistas por nome..." aria-label="Filtrar artistas por nome"/><button type="button" onClick={() => { if (term.trim()) onSearch(term.trim()); }}>Buscar músicas</button></div>{artistCatalogError && <p className="section-page-empty">{artistCatalogError}</p>}<div className="section-page-cards">{filteredArtists.map((artist,index)=><button className="section-page-card" key={artist.id || artist.name} onClick={() => onSearch(artist.name)}><Cover item={{title:artist.name,artworkUrl:artist.artworkUrl}} index={index}/><strong>{artist.name}</strong><small>{artist.genre || "Artista brasileiro"}</small><span>Ver músicas <ChevronRight size={14}/></span></button>)}</div>{!artistCatalogLoading && !filteredArtists.length && <p className="section-page-empty">Nenhum artista encontrado com esse nome.</p>}</>}
+      {section === "artistas" && <><div className="section-page-heading"><h2>{term.trim().length >= 2 ? `Resultados para “${term.trim()}”` : "Todos os artistas"}</h2><p>{artistCatalogLoading ? "Buscando artistas automaticamente..." : term.trim().length >= 2 ? `${artistCatalogTotal} artistas encontrados. Mostrando ${allArtists.length} nesta página.` : `${allArtists.length} artistas no catálogo inicial. Digite qualquer nome para consultar o catálogo completo.`}</p></div><div className="section-page-catalog-filter"><Search size={18}/><input value={term} onChange={(event) => setTerm(event.target.value)} placeholder="Filtrar artistas por nome..." aria-label="Filtrar artistas por nome"/><button type="button" onClick={() => { if (term.trim()) onSearch(term.trim()); }}>Buscar músicas</button></div>{artistCatalogError && <p className="section-page-empty">{artistCatalogError}</p>}<div className="section-page-cards">{filteredArtists.map((artist,index)=><button className="section-page-card" key={artist.id || artist.name} onClick={() => onSearch(artist.name)}><Cover item={{title:artist.name,artworkUrl:artist.artworkUrl}} index={index}/><strong>{artist.name}</strong><small>{artist.genre || "Artista brasileiro"}</small><span>Ver músicas <ChevronRight size={14}/></span></button>)}</div>{!artistCatalogLoading && !filteredArtists.length && <p className="section-page-empty">Nenhum artista encontrado com esse nome. Tente outra grafia.</p>}{artistCatalogHasMore && <div className="section-page-load-more"><button type="button" onClick={loadMoreArtists} disabled={artistCatalogLoading}>{artistCatalogLoading ? "Carregando..." : "Carregar mais artistas"}</button></div>}</>}
       {section === "albuns" && <><div className="section-page-heading"><h2>Álbuns do catálogo</h2><p>Explore álbuns encontrados nas músicas em destaque.</p></div><div className="section-page-cards">{albums.slice(0,32).map((album,index)=><button className="section-page-card" key={album.name} onClick={() => onSearch(album.name)}><Cover item={{title:album.name,artworkUrl:album.artworkUrl}} index={index}/><strong>{album.name}</strong><small>{album.artist || "Artista"}</small><span>Ver álbum <ChevronRight size={14}/></span></button>)}</div>{!albums.length && <p className="section-page-empty">Pesquise um artista ou álbum no campo acima para encontrar resultados.</p>}</>}
       {section === "playlists" && <><div className="section-page-heading"><h2>Encontre seu próximo som</h2><p>Seleções por estilo para você descobrir artistas e músicas.</p></div><div className="section-page-playlists">{playlists.map((playlist,index)=><button key={playlist.title} className={"section-page-playlist section-page-playlist--"+index%6} onClick={() => onGenre(playlist.genre)}><span className="section-page-playlist-icon"><ListMusic size={28}/></span><span><strong>{playlist.title}</strong><small>{playlist.desc}</small><em>Explorar músicas <ArrowRight size={14}/></em></span></button>)}</div></>}
       {section === "em-alta" && <><div className="section-page-heading"><h2>Mais tocadas agora</h2><p>Seleção baseada nos rankings musicais disponíveis.</p></div><div className="section-page-song-list">{songs.slice(0,40).map((item,index)=><button key={item.id || (item.title || item.name)+index} onClick={() => onOpenSong({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><b>{index+1}</b><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={index}/><span><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName || "Artista não informado"}</small></span><ChevronRight size={17}/></button>)}</div>{!songs.length && <p className="section-page-empty">O ranking está sendo atualizado. Tente novamente em instantes.</p>}</>}
