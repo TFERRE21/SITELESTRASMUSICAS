@@ -345,6 +345,34 @@ const server = http.createServer(async (req, res) => {
   }
 
 
+  if (req.method === "GET" && url.pathname === "/api/artists") {
+    const catalog = [
+      ["Gospel", ["Aline Barros","Fernandinho","Gabriela Rocha","Anderson Freire","Diante do Trono","Isadora Pompeo","Bruna Karla","Thalles Roberto","Casa Worship","Preto no Branco","Cassiane","Damares","Leandro Borges","Sarah Farias","Eli Soares","Samuel Messias","Kemilly Santos","Midian Lima","Eyshila","André Valadão"]],
+      ["Sertanejo", ["Jorge & Mateus","Marília Mendonça","Gusttavo Lima","Henrique & Juliano","Maiara & Maraisa","Zezé Di Camargo & Luciano","Chitãozinho & Xororó","Bruno & Marrone","Michel Teló","Leonardo","Sérgio Reis","Luan Santana","Ana Castela","Zé Neto & Cristiano","Matheus & Kauan","Fernando & Sorocaba","João Bosco & Vinícius","Daniel","Edson & Hudson","Rio Negro & Solimões","Chrystian & Ralf","Guilherme & Benuto","Israel & Rodolffo","Lauana Prado","Simone Mendes","Naiara Azevedo","Felipe & Rodrigo","Hugo & Guilherme","Clayton & Romário","Murilo Huff"]],
+      ["MPB", ["Gilberto Gil","Caetano Veloso","Marisa Monte","Djavan","Elis Regina","Milton Nascimento","Maria Bethânia","Chico Buarque","Gal Costa","Nando Reis","Lenine","Zélia Duncan","Adriana Calcanhotto","Cássia Eller","Seu Jorge","Tim Maia","Jorge Ben Jor","Alceu Valença","Maria Gadú","Liniker"]],
+      ["Pop", ["Anitta","Luísa Sonza","IZA","Jão","Ludmilla","Pabllo Vittar","Gloria Groove","Vitor Kley","Melim","Duda Beat","Marina Sena","Wanessa Camargo","Kelly Key","Manu Gavassi","Lexa","Pedro Sampaio","Giulia Be","Vitão"]],
+      ["Rock", ["Legião Urbana","Titãs","Capital Inicial","Barão Vermelho","Skank","Pitty","Charlie Brown Jr.","Engenheiros do Hawaii","Os Paralamas do Sucesso","Raimundos","Sepultura","O Rappa","Nando Reis","Detonautas","CPM 22","Jota Quest","Ira!","Lobão","RPM","Fresno"]],
+      ["Rap", ["Emicida","Racionais MC's","Criolo","Djonga","Mano Brown","BK'","MV Bill","Rashid","Projota","Orochi","Filipe Ret","Xamã","Baco Exu do Blues","Marcelo D2","Hungria Hip Hop","Sabotage","Dexter","Flora Matos"]],
+      ["Funk", ["MC Kevin","MC Hariel","MC Ryan SP","Dennis DJ","MC Livinho","MC Cabelinho","MC Don Juan","MC IG","MC Daniel","MC Paiva","MC Menor JP","MC Carol","Tati Quebra Barraco","MC Marcinho","MC Zaac","Kevinho","MC Lan"]],
+      ["Pagode", ["Ferrugem","Dilsinho","Sorriso Maroto","Grupo Menos é Mais","Péricles","Belo","Thiaguinho","Daquele Jeito","Turma do Pagode","Pixote","Jeito Moleque","Exaltasamba","Katinguelê","Revelação","Mumuzinho","Di Propósito","Tiee"]],
+      ["Samba", ["Zeca Pagodinho","Martinho da Vila","Beth Carvalho","Jorge Aragão","Arlindo Cruz","Paulinho da Viola","Alcione","Dona Ivone Lara","Diogo Nogueira","Teresa Cristina","Roberta Sá","Leci Brandão","Neguinho da Beija-Flor","Dudu Nobre","Fundo de Quintal"]],
+      ["Forró", ["Luiz Gonzaga","Wesley Safadão","Mastruz com Leite","João Gomes","Dorgival Dantas","Falamansa","Calcinha Preta","Limão com Mel","Aviões do Forró","Xand Avião","Tarcísio do Acordeon","Zé Vaqueiro","Mastruz com Leite","Trio Nordestino","Elba Ramalho","Flávio José"]],
+      ["Reggae", ["Natiruts","Cidade Negra","Maneva","Planta e Raiz","Armandinho","Maskavo","Ponto de Equilíbrio","Tribos de Jah","Edson Gomes","Onze:20"]],
+      ["Indie", ["Terno Rei","O Grilo","Los Hermanos","Rubel","Clarice Falcão","Boogarins","Maglore","Vivendo do Ócio","Scalene","Dingo Bells"]],
+      ["Jazz", ["João Gilberto","Hermeto Pascoal","Eliane Elias","Baden Powell","Azimuth","Leny Andrade","Hamilton de Holanda","João Donato","Dori Caymmi","Moacir Santos"]],
+      ["Música Latina", ["Daniela Mercury","Ivete Sangalo","Anitta","Claudia Leitte","Ludmilla","Pabllo Vittar","Carlinhos Brown","Margareth Menezes","Alinne Rosa","Bell Marques"]]
+    ];
+    const normalizeArtist = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\\s+/g, " ").trim();
+    const unique = new Map();
+    for (const [genre, names] of catalog) {
+      for (const name of names) {
+        const key = normalizeArtist(name);
+        if (!unique.has(key)) unique.set(key, { id: `artist-${key.replace(/ /g, "-")}`, name, title: name, genre, country: "BR", provider: "Catálogo de artistas brasileiros" });
+      }
+    }
+    return json(res, 200, { items: [...unique.values()], total: unique.size, source: "Catálogo editorial brasileiro", hasMore: false });
+  }
+
   if (req.method === "GET" && url.pathname === "/api/genre-artists") {
     const genre = (url.searchParams.get("genre") || "").trim().slice(0, 80);
     if (!genre) return json(res, 400, { error: "Informe o gênero musical.", items: [] });
@@ -381,7 +409,7 @@ const server = http.createServer(async (req, res) => {
         const mbUrl = new URL("https://musicbrainz.org/ws/2/artist");
         mbUrl.searchParams.set("query", `tag:"${tag.replace(/["\\\\]/g, " ")}"`);
         mbUrl.searchParams.set("fmt", "json");
-        mbUrl.searchParams.set("limit", "30");
+        mbUrl.searchParams.set("limit", "100");
         const response = await fetch(mbUrl, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(9000) });
         if (!response.ok) continue;
         const payload = await response.json();
@@ -398,7 +426,7 @@ const server = http.createServer(async (req, res) => {
       const seen = new Set(editorial.map((item) => norm(item.name)));
       const brazilianCatalog = discovered.filter((item) => !seen.has(norm(item.name)));
       // Prioriza a seleção editorial nacional e complementa somente com artistas marcados como brasileiros.
-      const items = [...editorial, ...brazilianCatalog].slice(0, 30);
+      const items = [...editorial, ...brazilianCatalog];
       const source = editorial.length && brazilianCatalog.length ? "Artistas brasileiros + MusicBrainz" : editorial.length ? "Seleção de artistas brasileiros" : "MusicBrainz (artistas brasileiros)";
       return json(res, 200, { genre, items, total: items.length, source, note: items.length ? "" : "Não encontramos artistas para este gênero. Tente novamente mais tarde." });
     } catch (error) {
