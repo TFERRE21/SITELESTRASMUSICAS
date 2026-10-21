@@ -302,12 +302,12 @@ const server = http.createServer(async (req, res) => {
     // Do not show a guitar tablature unchanged when another instrument is selected.
     if (chord && !["violao", "guitarra"].includes(instrumentKey)) {
       const originalContent = String(chord.content || "");
-      const hasGuitarTab = /(?:^|\\n)\\s*[eEBGDA]\\|[-0-9hpb~/\\-]{3,}/m.test(originalContent);
-      const hasSectionedChordSheet = /\\[(?:intro|verse|verso|chorus|refr[aã]o|bridge|ponte|solo)/i.test(originalContent);
+      const hasGuitarTab = /(?:^|\n)\s*[eEBGDA]\|[-0-9hpb~/\-]{3,}/m.test(originalContent);
+      const hasSectionedChordSheet = /\[(?:intro|verse|verso|chorus|refr[aã]o|bridge|ponte|solo)/i.test(originalContent);
       if (hasGuitarTab || hasSectionedChordSheet) {
-        const chordNames = [...new Set((originalContent.match(/\\b[A-G](?:#|b)?(?:m|min|maj|sus|dim|aug|add)?[0-9]?(?:\\/[A-G](?:#|b)?)?\\b/g) || [])
+        const chordNames = [...new Set((originalContent.match(/\b[A-G](?:#|b)?(?:m|min|maj|sus|dim|aug|add)?[0-9]?(?:\/[A-G](?:#|b)?)?\b/g) || [])
           .filter((name) => !/^(?:E|B|G|D|A)$/i.test(name) || !hasGuitarTab))].slice(0, 32);
-        const sections = [...originalContent.matchAll(/\\[([^\\]]+)\\]/g)].map((match) => match[1]).slice(0, 12);
+        const sections = [...originalContent.matchAll(/\[([^\]]+)\]/g)].map((match) => match[1]).slice(0, 12);
         let adapted = [];
         if (instrumentKey === "baixo") {
           adapted = [
