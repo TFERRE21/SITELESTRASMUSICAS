@@ -636,7 +636,7 @@ const server = http.createServer(async (req, res) => {
           "",
           "Aviso: guia de acordes para estudo, sem letra e sem pretensão de reproduzir exatamente a gravação ao vivo.",
           "Fonte para conferir a versão completa: https://www.cifraclub.com.br/aline-barros/ressuscita-me/"
-        ].join("\\n"),
+        ].join("\n"),
         source: "catalogo-interno-referencia",
         updatedAt: new Date().toISOString()
       };
