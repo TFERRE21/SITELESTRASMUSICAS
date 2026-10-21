@@ -363,17 +363,17 @@ const server = http.createServer(async (req, res) => {
       gospel: ["Aline Barros", "Fernandinho", "Gabriela Rocha", "Anderson Freire", "Diante do Trono", "Isadora Pompeo", "Bruna Karla", "Thalles Roberto", "Casa Worship", "Preto no Branco"],
       sertanejo: ["Jorge & Mateus", "Marília Mendonça", "Gusttavo Lima", "Henrique & Juliano", "Maiara & Maraisa", "Zezé Di Camargo & Luciano", "Chitãozinho & Xororó"],
       mpb: ["Gilberto Gil", "Caetano Veloso", "Marisa Monte", "Djavan", "Elis Regina", "Milton Nascimento", "Maria Bethânia"],
-      pop: ["Anitta", "Luísa Sonza", "IZA", "Jão", "Ludmilla", "Dua Lipa", "Taylor Swift"],
+      pop: ["Anitta", "Luísa Sonza", "IZA", "Jão", "Ludmilla", "Pabllo Vittar", "Gloria Groove"],
       rock: ["Legião Urbana", "Titãs", "Capital Inicial", "Barão Vermelho", "Skank", "Pitty", "Charlie Brown Jr."],
       rap: ["Emicida", "Racionais MC's", "Criolo", "Djonga", "Mano Brown", "BK'", "MV Bill"],
       funk: ["MC Kevin", "Anitta", "MC Hariel", "MC Ryan SP", "Ludmilla", "Dennis DJ"],
       pagode: ["Ferrugem", "Dilsinho", "Sorriso Maroto", "Grupo Menos é Mais", "Péricles", "Belo"],
       samba: ["Zeca Pagodinho", "Martinho da Vila", "Beth Carvalho", "Jorge Aragão", "Arlindo Cruz", "Paulinho da Viola"],
       forro: ["Luiz Gonzaga", "Wesley Safadão", "Mastruz com Leite", "João Gomes", "Dorgival Dantas", "Falamansa"],
-      reggae: ["Natiruts", "Cidade Negra", "Maneva", "Planta e Raiz", "Bob Marley"],
+      reggae: ["Natiruts", "Cidade Negra", "Maneva", "Planta e Raiz", "Armandinho", "Maskavo"],
       indie: ["Terno Rei", "O Grilo", "Los Hermanos", "Rubel", "Clarice Falcão"],
       jazz: ["João Gilberto", "Hermeto Pascoal", "Eliane Elias", "Baden Powell", "Azimuth"],
-      "musica latina": ["Shakira", "Juanes", "Bad Bunny", "Karol G", "Maná"]
+      "musica latina": ["Daniela Mercury", "Ivete Sangalo", "Anitta", "Claudia Leitte", "Ludmilla", "Pabllo Vittar"]
     };
     try {
       const found = new Map();
