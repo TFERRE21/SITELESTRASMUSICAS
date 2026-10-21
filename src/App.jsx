@@ -51,6 +51,8 @@ export default function App() {
   const [genre, setGenre] = useState("Todos");
   const [results, setResults] = useState([]);
   const [chart, setChart] = useState([]);
+  const [chartSource, setChartSource] = useState("");
+  const [chartNote, setChartNote] = useState("");
   const [country, setCountry] = useState("br");
   const [saved, setSaved] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -97,8 +99,12 @@ export default function App() {
     fetch(`/api/charts?country=${country}`).then(async (r) => {
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || "Ranking indisponível.");
-      if (active) setChart(Array.isArray(data.items) ? data.items : []);
-    }).catch(() => { if (active) setChart([]); });
+      if (active) {
+        setChart(Array.isArray(data.items) ? data.items : []);
+        setChartSource(data.source || "");
+        setChartNote(data.note || "");
+      }
+    }).catch(() => { if (active) { setChart([]); setChartSource(""); setChartNote(""); } });
     return () => { active = false; };
   }, [country]);
 
@@ -325,7 +331,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
         <div className="portal-home-center">
           <section className="portal-ranking-panel" id="destaques">
             <div className="portal-section-heading"><div><span className="portal-kicker">RANKINGS MUSICAIS</span><h2>Em alta agora.</h2><p>Top 10 por região, com base nas atualizações identificadas.</p></div><div className="portal-tabs"><button className={country === "br" ? "active" : ""} onClick={() => setCountry("br")}>🇧🇷 Brasil</button><button className={country === "us" ? "active" : ""} onClick={() => setCountry("us")}>🌐 Global</button></div></div>
-            <p className="portal-chart-source"><span className="portal-chart-source__info">ⓘ</span> Os dados são referentes à popularidade da fonte musical consultada e podem ter atualizações periódicas. Esta seção reflete apenas os títulos disponíveis no momento.</p>
+            <p className="portal-chart-source"><span className="portal-chart-source__info">ⓘ</span> {chartNote || "Os dados refletem a popularidade da fonte musical consultada e podem ter atualizações periódicas."}{chartSource ? <span className="portal-chart-source__name">Fonte: {chartSource}</span> : null}</p>
             {visibleChart.length ? <div className="portal-ranking-list">{visibleChart.slice(0,10).map((item,i)=><button className="portal-ranking-row" key={item.id || item.title || item.name} onClick={()=>openLyrics({...item,title:item.title || item.name,artist:item.artist || item.artistName,artworkUrl:item.artworkUrl || item.artworkUrl100})}><span className="portal-ranking-number">{String(i+1).padStart(2,"0")}</span><Cover item={{...item,title:item.title || item.name,artworkUrl:item.artworkUrl || item.artworkUrl100}} index={i}/><span className="portal-ranking-meta"><strong>{item.title || item.name}</strong><small>{item.artist || item.artistName}</small></span><ChevronRight size={15}/></button>)}</div> : <div className="portal-ranking-empty"><Disc3 size={20}/><span>O ranking não está disponível neste momento. Tente novamente mais tarde.</span></div>}
           </section>
           <section className="portal-genres portal-genres--compact" id="generos"><div className="portal-section-heading"><div><span className="portal-kicker">EXPLORE POR ESTILO</span><h2>Qual é o seu som?</h2><p>Escolha um gênero e descubra músicas relacionadas quando disponíveis.</p></div></div><div className="portal-genre-grid">{genres.filter((g)=>g!=="Todos").map((g,i)=><button key={g} className="portal-genre" onClick={()=>{setGenre(g);setQuery(g);search(g,1);}}><span className={`portal-genre__icon portal-genre__icon--${i%6}`}>{i%3===0?<Headphones size={17}/>:i%3===1?<Music2 size={17}/>:<Disc3 size={17}/>}</span><span>{g}</span><ArrowRight size={14}/></button>)}</div></section>
