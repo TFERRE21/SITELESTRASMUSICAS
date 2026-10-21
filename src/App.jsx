@@ -259,7 +259,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [capo, setCapo] = useState(0);
   const chordNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const chordAliases = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#", "A#": "A#", "D#": "D#", "G#": "G#" };
-  const transposeChordText = (text, steps) => String(text || "").replace(/\\b([A-G])([#b]?)(m|maj7|maj|min|dim|aug|sus2|sus4|sus|add9|m7|7M|7|9|11|13|°|ø)?(\\/[A-G][#b]?)?\\b/g, (whole, root, accidental, quality = "", bass = "") => {
+  const transposeChordText = (text, steps) => String(text || "").replace(/\b([A-G])([#b]?)(maj7|maj|min|m7|m|dim|aug|sus2|sus4|sus|add9|7M|7|9|11|13|°|ø)?(\/[A-G][#b]?)?\b/g, (whole, root, accidental, quality = "", bass = "") => {
     const normalizedRoot = chordAliases[root + accidental] || (root + accidental);
     const index = chordNames.indexOf(normalizedRoot);
     if (index < 0) return whole;
