@@ -20,6 +20,80 @@ function Brand({ onClick }) {
   </a>;
 }
 
+
+const genreSlug = (value) => normalize(value).replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+const genreFromSlug = (slug) => genres.find((item) => item !== "Todos" && genreSlug(item) === slug) || "";
+
+function ArtistPortrait({ name, genre, index }) {
+  const [image, setImage] = useState("");
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const lookup = async () => {
+      const candidates = [name.replace(/ /g, "_")];
+      for (const lang of ["pt", "en"]) {
+        for (const title of candidates) {
+          try {
+            const response = await fetch(`https://${lang}.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(title)}`, { headers: { Accept: "application/json" } });
+            if (!response.ok) continue;
+            const data = await response.json();
+            const imageUrl = data.thumbnail?.source || data.originalimage?.source || "";
+            if (imageUrl && !cancelled) { setImage(imageUrl); return; }
+          } catch {}
+        }
+      }
+      if (!cancelled) setFailed(true);
+    };
+    lookup();
+    return () => { cancelled = true; };
+  }, [name]);
+  const colors = ["#e9dffb", "#f8e2d8", "#dcecf7", "#f7edce", "#dcefe5", "#f4ddeb"];
+  return image
+    ? <img className="genre-portrait" src={image} alt={`Foto de ${name}`} loading="lazy" />
+    : <div className="genre-portrait genre-portrait--fallback" style={{ background: colors[index % colors.length] }} aria-label={failed ? `Foto indisponível para ${name}` : `Carregando foto de ${name}`}><span>{name.split(/\\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]).join("").toUpperCase()}</span></div>;
+}
+
+function GenreDirectoryPage({ name, onBack, onViewArtist }) {
+  const [artists, setArtists] = useState([]);
+  const [source, setSource] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [filter, setFilter] = useState("");
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true); setError("");
+    fetch(`/api/genre-artists?genre=${encodeURIComponent(name)}`)
+      .then(async (response) => { const data = await response.json(); if (!response.ok) throw new Error(data.error || "Não foi possível carregar os artistas."); return data; })
+      .then((data) => { if (!cancelled) { setArtists(Array.isArray(data.items) ? data.items : []); setSource(data.source || "Catálogo musical"); } })
+      .catch((err) => { if (!cancelled) setError(err.message || "Falha ao carregar os artistas."); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [name]);
+  const visibleArtists = artists.filter((artist) => normalize(artist.name || artist.title).includes(normalize(filter)));
+  return <div className="genre-directory">
+    <header className="genre-directory-hero">
+      <div className="genre-directory-hero__texture" />
+      <div className="genre-directory-hero__top"><a href="/" onClick={(event) => { event.preventDefault(); onBack(); }}>⌂ Início</a><ChevronRight size={15}/><span>Gêneros</span><ChevronRight size={15}/><span>{name}</span></div>
+      <div className="genre-directory-hero__main"><div><span className="genre-directory-kicker">EXPLORE O UNIVERSO MUSICAL</span><h1>Artistas de <em>{name}</em></h1><p>{loading ? "Carregando artistas..." : `${artists.length} artistas encontrados no gênero ${name}.`}</p><small>Fonte consultada: {source || "Catálogo de artistas brasileiros"}</small></div>
+      <label className="genre-directory-search"><Search size={19}/><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={`Buscar artista no ${name}...`} aria-label="Buscar artista"/></label>
+      <button className="genre-directory-clear" onClick={() => setFilter("")}>Limpar pesquisa <X size={16}/></button></div>
+    </header>
+    <main className="genre-directory-content">
+      {loading ? <div className="genre-directory-status"><AudioLines size={24}/> Carregando artistas brasileiros...</div> :
+       error ? <div className="genre-directory-status">{error}<button onClick={() => window.location.reload()}>Tentar novamente</button></div> :
+       visibleArtists.length ? <div className="genre-directory-grid">{visibleArtists.map((artist, index) => {
+         const artistName = artist.name || artist.title;
+         return <article className="genre-directory-card" key={artist.id || artistName}>
+           <ArtistPortrait name={artistName} genre={name} index={index}/>
+           <div className="genre-directory-card__body"><h2>{artistName}</h2><p>Cantor(a) ou banda · {name}</p><small>{artist.provider || "Seleção de artistas brasileiros"}{artist.country ? ` · ${artist.country === "BR" ? "Brasil" : artist.country}` : " · Brasil"}</small>
+           <button onClick={() => onViewArtist(artistName)}>Ver músicas <ChevronRight size={17}/></button></div>
+         </article>;
+       })}</div> : <div className="genre-directory-status">Nenhum artista corresponde à sua pesquisa.</div>}
+    </main>
+    <footer className="genre-directory-footer"><button onClick={onBack}><ChevronRight size={16}/> Voltar à página inicial</button><span>Site Músicas · Letras que tocam você</span></footer>
+  </div>;
+}
+
 function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, onPrint, onDownload, onShare, onVideo, onListen, autoplayVideo, onNextTrack, nextTrackLoading, onSave, saved, catalog, onOpen, fontScale, setFontScale, account, comments, commentsLoading, commentText, setCommentText, onSubmitComment, commentError, commentNotice, audioRef, isPreviewPlaying, previewTime, previewDuration, onSeekPreview }) {
   const [artistItems, setArtistItems] = useState([]);
   const [relatedItems, setRelatedItems] = useState([]);
@@ -119,6 +193,7 @@ export default function App() {
   const [submittedQuery, setSubmittedQuery] = useState("");
   const [genre, setGenre] = useState("Todos");
   const [genrePage, setGenrePage] = useState("");
+  const [genreRoute, setGenreRoute] = useState(() => { const match = window.location.pathname.match(/^\\/generos\\/([^/]+)/); return match ? genreFromSlug(decodeURIComponent(match[1])) : ""; });
   const [genreArtists, setGenreArtists] = useState([]);
   const [genreArtistsLoading, setGenreArtistsLoading] = useState(false);
   const [results, setResults] = useState([]);
@@ -340,6 +415,10 @@ export default function App() {
 
   useEffect(() => {
     const openFromAddress = () => {
+      const routeMatch = window.location.pathname.match(/^\\/generos\\/([^/]+)/);
+      const routeGenre = routeMatch ? genreFromSlug(decodeURIComponent(routeMatch[1])) : "";
+      setGenreRoute(routeGenre);
+      if (routeGenre) { setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); return; }
       const params = new URLSearchParams(window.location.search);
       const title = params.get("title");
       const artist = params.get("artist");
@@ -400,21 +479,19 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
   };
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
-  const openGenrePage = async (name) => {
-    setGenre(name); setGenrePage(name); setQuery(name); setSubmittedQuery(name);
-    setResults([]); setGenreArtists([]); setGenreArtistsLoading(true);
-    setMessage(`Carregando cantores e bandas de ${name}...`); setSource(""); setHasMore(false); setPage(1);
-    window.history.pushState({ genre: name }, "", `?genero=${encodeURIComponent(name)}`);
-    document.getElementById("busca-resultados")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    try {
-      const response = await fetch(`/api/genre-artists?genre=${encodeURIComponent(name)}`);
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Não foi possível carregar os artistas.");
-      setGenreArtists(Array.isArray(data.items) ? data.items : []);
-      setSource(data.source || "Catálogo de artistas");
-      setMessage(data.items?.length ? `${data.items.length} artistas encontrados no gênero ${name}.` : (data.note || `Ainda não encontramos artistas para ${name}.`));
-    } catch (error) { setGenreArtists([]); setMessage(error.message || "Falha ao carregar artistas. Tente novamente."); }
-    finally { setGenreArtistsLoading(false); }
+  const openGenrePage = (name) => {
+    setGenre(name); setGenrePage(name); setGenreRoute(name); setQuery(name); setSubmittedQuery("");
+    setResults([]); setGenreArtists([]); setLyrics(null); setVideo(null); setVideoError("");
+    window.history.pushState({ genre: name }, "", `/generos/${genreSlug(name)}`);
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const backFromGenre = () => {
+    setGenreRoute(""); setGenrePage(""); setSubmittedQuery(""); setLyrics(null); setVideo(null);
+    window.history.pushState({}, "", "/"); window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+  const openArtistSongs = (name) => {
+    setGenreRoute(""); setGenrePage(""); window.history.pushState({}, "", "/");
+    setQuery(name); search(name, 1); window.scrollTo({ top: 0, behavior: "smooth" });
   };
   const backToPortal = () => { window.history.replaceState({}, "", window.location.pathname); setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); };
   const shareCurrentSong = async () => { try { if (navigator.share) await navigator.share({title:lyrics?.title || "Site Músicas", text:`${lyrics?.title || ""} — ${lyrics?.artist || ""}`, url:window.location.href}); else if (navigator.clipboard) await navigator.clipboard.writeText(window.location.href); } catch {} };
@@ -515,6 +592,8 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     link.remove();
     URL.revokeObjectURL(url);
   };
+
+  if (genreRoute) return <GenreDirectoryPage key={genreRoute} name={genreRoute} onBack={backFromGenre} onViewArtist={openArtistSongs} />;
 
   return <div className={lyrics ? "portal portal--song-open" : "portal"}>
     <div className="portal-topline"><span><Sparkles size={13}/> Descubra a história por trás de cada música</span><span className="portal-topline__right">Música conecta pessoas</span></div>
