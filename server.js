@@ -315,7 +315,7 @@ const server = http.createServer(async (req, res) => {
             const resultArtist = String(item.artist?.name || item.artistName || item.artist || "Artista não informado").slice(0, 160);
             const tracks = Array.isArray(item.tracks) ? item.tracks.map((track) => String(track.instrument || track.name || "")).filter(Boolean).slice(0, 8) : [];
             return { title: resultTitle, artist: resultArtist, instrumentTracks: tracks,
-              url: "https://www.songsterr.com/a/wa/bestMatchForQueryStringPart?s=" + encodeURIComponent(resultTitle + " " + resultArtist) };
+              url: "https://www.songsterr.com/?pattern=" + encodeURIComponent(resultTitle + " " + resultArtist) };
           });
         }
       } catch { /* Keep the local catalog usable if the external service is unavailable. */ }
