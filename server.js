@@ -370,6 +370,7 @@ const server = http.createServer(async (req, res) => {
             new Promise((_, reject) => setTimeout(() => reject(new Error("Ultimate Guitar search timeout")), 9000))
           ]);
           const results = Array.isArray(result?.responses) ? result.responses : [];
+          const slugUG = (value) => key(value).replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 100);
           const titleTokens = key(title).split(" ").filter(Boolean);
           const artistTokens = key(artist).split(" ").filter(Boolean);
           const overlap = (tokens, candidate) => tokens.length ? tokens.filter((token) => key(candidate).split(" ").includes(token)).length / tokens.length : 0;
@@ -391,7 +392,7 @@ const server = http.createServer(async (req, res) => {
               if (content.length > 20 && content.length <= 30000 && key(candidateTitle) === titleKey &&
                   (key(candidateArtist) === artistKey || key(candidateArtist).includes(artistKey) || artistKey.includes(key(candidateArtist)))) {
                 chord = {
-                  id: "ultimate-guitar-" + String(candidate.id || slug(candidateArtist) + "-" + slug(candidateTitle)),
+                  id: "ultimate-guitar-" + String(candidate.id || slugUG(candidateArtist) + "-" + slugUG(candidateTitle)),
                   title: candidateTitle,
                   artist: candidateArtist,
                   instrument,
