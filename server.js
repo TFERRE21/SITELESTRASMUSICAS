@@ -316,9 +316,12 @@ const server = http.createServer(async (req, res) => {
     const offset = (page - 1) * limit;
     const normalize = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim();
     const query = normalize(q);
+    const genreNames = new Set(["gospel", "sertanejo", "mpb", "pop", "rock", "rap", "funk", "pagode", "samba", "forro", "reggae", "indie", "jazz", "musica latina", "musica country", "eletronica", "classica", "r&b", "blues", "metal", "alternativo"]);
+    const isGenreSearch = genreNames.has(query);
     const tokens = query.split(" ").filter((token) => token.length > 1);
     const relevant = (item) => {
-      const fields = normalize([item.title, item.artist, item.album].filter(Boolean).join(" "));
+      const fields = normalize([item.title, item.artist, item.album, item.genre].filter(Boolean).join(" "));
+      if (isGenreSearch) return true;
       return fields.includes(query) || (tokens.length > 0 && tokens.every((token) => fields.includes(token)));
     };
     const mapApple = (track) => ({
@@ -365,7 +368,7 @@ const server = http.createServer(async (req, res) => {
         const payload = await response.json();
         const appleItems = (payload.results || []).map(mapApple).filter(relevant);
         items = appleItems;
-        total = appleItems.length;
+        total = Number(payload.resultCount) || appleItems.length;
       }
       // If Apple has no relevant matches, try MusicBrainz title/recording search, then artist-specific search.
       if (!items.length) {
