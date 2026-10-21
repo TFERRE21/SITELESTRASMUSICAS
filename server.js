@@ -140,6 +140,23 @@ async function lrclib(pathname, params = {}) {
   return response.json();
 }
 
+async function lyricsOvh(title, artist) {
+  if (!title || !artist) return null;
+  const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
+  try {
+    const response = await fetch(url, {
+      headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const lyrics = typeof payload.lyrics === "string" ? payload.lyrics.trim() : "";
+    return lyrics ? { lyrics, provider: "Lyrics.ovh", providerUrl: url } : null;
+  } catch {
+    return null;
+  }
+}
+
 function normalizeTrack(track) {
   return {
     id: String(track.id),
@@ -580,8 +597,12 @@ const server = http.createServer(async (req, res) => {
         }
       }
       if (!results.length) {
+        const fallback = await lyricsOvh(title, artist);
+        if (fallback) {
+          return json(res, 200, { lyrics: fallback.lyrics, provider: fallback.provider, providerUrl: fallback.providerUrl, trackName: title, artistName: artist, instrumental: false, fallback: true });
+        }
         const status = lastUpstreamError?.status === 503 || lastUpstreamError?.status === 502 ? 503 : lastUpstreamError?.status === 429 ? 429 : 404;
-        return json(res, status, { error: status === 503 ? "O serviço de letras está temporariamente instável. Tente novamente em instantes." : status === 429 ? "Muitas consultas foram feitas em sequência. Aguarde um pouco e tente novamente." : "Não encontramos letra disponível para esta música." });
+        return json(res, status, { error: status === 503 ? "Os serviços de letras estão temporariamente instáveis. Tente novamente em instantes." : status === 429 ? "Muitas consultas foram feitas em sequência. Aguarde um pouco e tente novamente." : "Não encontramos letra disponível para esta música nas fontes consultadas." });
       }
       const exact = results.find((item) => norm(item.trackName) === norm(title) && (!artist || norm(item.artistName).includes(norm(artist)) || norm(artist).includes(norm(item.artistName))));
       const match = exact || results.find((item) => norm(item.trackName) === norm(title)) || results.find((item) => norm(item.trackName).includes(norm(title)) && (!artist || norm(item.artistName).includes(norm(artist)))) || results[0];
@@ -603,7 +624,13 @@ const server = http.createServer(async (req, res) => {
           }
         }
       }
-      if (!lyrics) return json(res, 404, { error: "Encontramos a música, mas a fonte não disponibiliza a letra." });
+      if (!lyrics) {
+        const fallback = await lyricsOvh(title || match.trackName, artist || match.artistName);
+        if (fallback) {
+          return json(res, 200, { lyrics: fallback.lyrics, provider: fallback.provider, providerUrl: fallback.providerUrl, trackName: title || match.trackName, artistName: artist || match.artistName, instrumental: false, fallback: true });
+        }
+        return json(res, 404, { error: "Encontramos a música, mas nenhuma fonte disponibilizou a letra." });
+      }
       return json(res, 200, { lyrics, provider: "LRCLIB", trackName: detail.trackName || match.trackName, artistName: detail.artistName || match.artistName, instrumental: Boolean(detail.instrumental) });
     } catch (error) {
       const status = error.status === 429 ? 429 : error.status === 503 ? 503 : 502;
