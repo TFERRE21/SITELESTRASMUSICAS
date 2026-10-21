@@ -366,7 +366,7 @@ const server = http.createServer(async (req, res) => {
         const response = await fetch(mbUrl, { headers: { "User-Agent": USER_AGENT, "Accept": "application/json" }, signal: AbortSignal.timeout(12000) });
         if (!response.ok) return json(res, 502, { error: "A busca de artistas está temporariamente indisponível.", items: [], total: 0, hasMore: false });
         const payload = await response.json();
-        const items = (payload.artists || []).map((artist) => ({
+        let items = (payload.artists || []).map((artist) => ({
           id: `mb-artist-${artist.id}`,
           name: artist.name || "Artista sem nome",
           title: artist.name || "Artista sem nome",
@@ -376,7 +376,39 @@ const server = http.createServer(async (req, res) => {
           provider: "MusicBrainz",
           providerUrl: `https://musicbrainz.org/artist/${artist.id}`
         }));
-        return json(res, 200, { items, total: Number(payload.count || items.length), page, limit, hasMore: offset + items.length < Number(payload.count || items.length), source: "MusicBrainz" });
+        let total = Number(payload.count || items.length);
+        let source = "MusicBrainz";
+        // MusicBrainz does not list every emerging or independent artist.
+        // If it has no match, fall back to Apple's artist catalog.
+        if (items.length === 0 && page === 1) {
+          const appleUrl = new URL("https://itunes.apple.com/search");
+          appleUrl.searchParams.set("term", queryText);
+          appleUrl.searchParams.set("entity", "musicArtist");
+          appleUrl.searchParams.set("limit", "200");
+          appleUrl.searchParams.set("country", "BR");
+          const appleResponse = await fetch(appleUrl, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
+          if (appleResponse.ok) {
+            const applePayload = await appleResponse.json();
+            const seen = new Set();
+            items = (applePayload.results || []).map((artist) => ({
+              id: `itunes-artist-${artist.artistId || normalizeArtist(artist.artistName)}`,
+              name: artist.artistName || "Artista sem nome",
+              title: artist.artistName || "Artista sem nome",
+              genre: artist.primaryGenreName || "Artista",
+              country: "BR",
+              provider: "Apple Music/iTunes",
+              providerUrl: artist.artistLinkUrl || ""
+            })).filter((artist) => {
+              const key = normalizeArtist(artist.name);
+              if (!key || seen.has(key)) return false;
+              seen.add(key);
+              return true;
+            });
+            total = items.length;
+            source = "Apple Music/iTunes";
+          }
+        }
+        return json(res, 200, { items, total, page, limit, hasMore: source === "MusicBrainz" && offset + items.length < Number(payload.count || items.length), source });
       } catch (error) {
         return json(res, 502, { error: "Não foi possível consultar o catálogo de artistas agora. Tente novamente.", items: [], total: 0, hasMore: false });
       }

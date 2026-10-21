@@ -66,6 +66,9 @@ function GenreDirectoryPage({ name, onBack, onViewArtist }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [filter, setFilter] = useState("");
+  const [remoteArtistResults, setRemoteArtistResults] = useState([]);
+  const [remoteArtistLoading, setRemoteArtistLoading] = useState(false);
+  const [remoteArtistError, setRemoteArtistError] = useState("");
   useEffect(() => {
     let cancelled = false;
     setLoading(true); setError("");
@@ -76,18 +79,39 @@ function GenreDirectoryPage({ name, onBack, onViewArtist }) {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, [name]);
-  const visibleArtists = artists.filter((artist) => normalize(artist.name || artist.title).includes(normalize(filter)));
+  useEffect(() => {
+    const query = filter.trim();
+    if (query.length < 2) { setRemoteArtistResults([]); setRemoteArtistError(""); setRemoteArtistLoading(false); return; }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      setRemoteArtistLoading(true); setRemoteArtistError("");
+      try {
+        const response = await fetch("/api/artists?q=" + encodeURIComponent(query) + "&page=1");
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || "Não foi possível pesquisar esse artista.");
+        if (!cancelled) setRemoteArtistResults(Array.isArray(data.items) ? data.items : []);
+      } catch (err) {
+        if (!cancelled) { setRemoteArtistResults([]); setRemoteArtistError(err.message || "A busca de artistas está temporariamente indisponível."); }
+      } finally { if (!cancelled) setRemoteArtistLoading(false); }
+    }, 300);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [filter]);
+  const localMatches = artists.filter((artist) => normalize(artist.name || artist.title).includes(normalize(filter)));
+  const visibleArtists = filter.trim().length >= 2
+    ? [...new Map([...localMatches, ...remoteArtistResults].map((artist) => [normalize(artist.name || artist.title), artist])).values()]
+    : localMatches;
   return <div className="genre-directory">
     <header className="genre-directory-hero">
       <div className="genre-directory-hero__texture" />
       <div className="genre-directory-hero__top"><a href="/" onClick={(event) => { event.preventDefault(); onBack(); }}>⌂ Início</a><ChevronRight size={15}/><span>Gêneros</span><ChevronRight size={15}/><span>{name}</span></div>
-      <div className="genre-directory-hero__main"><div><span className="genre-directory-kicker">EXPLORE O UNIVERSO MUSICAL</span><h1>Artistas de <em>{name}</em></h1><p>{loading ? "Carregando artistas..." : `${artists.length} artistas encontrados no gênero ${name}.`}</p><small>Fonte consultada: {source || "Catálogo de artistas brasileiros"}</small></div>
-      <label className="genre-directory-search"><Search size={19}/><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder={`Buscar artista no ${name}...`} aria-label="Buscar artista"/></label>
+      <div className="genre-directory-hero__main"><div><span className="genre-directory-kicker">EXPLORE O UNIVERSO MUSICAL</span><h1>Artistas de <em>{name}</em></h1><p>{loading ? "Carregando artistas..." : filter.trim().length >= 2 ? (remoteArtistLoading ? `Buscando “${filter.trim()}” em catálogos musicais...` : `${visibleArtists.length} resultados para “${filter.trim()}”.`) : `${artists.length} artistas encontrados no gênero ${name}.`}</p><small>Fonte consultada: {source || "Catálogo de artistas brasileiros"}</small></div>
+      <label className="genre-directory-search"><Search size={19}/><input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Digite qualquer nome de artista..." aria-label="Buscar qualquer artista" autoComplete="off"/></label>
       <button className="genre-directory-clear" onClick={() => setFilter("")}>Limpar pesquisa <X size={16}/></button></div>
     </header>
     <main className="genre-directory-content">
       {loading ? <div className="genre-directory-status"><AudioLines size={24}/> Carregando artistas brasileiros...</div> :
        error ? <div className="genre-directory-status">{error}<button onClick={() => window.location.reload()}>Tentar novamente</button></div> :
+       remoteArtistLoading && filter.trim().length >= 2 && !visibleArtists.length ? <div className="genre-directory-status"><AudioLines size={24}/> Buscando artistas em catálogos musicais...</div> :
        visibleArtists.length ? <div className="genre-directory-grid">{visibleArtists.map((artist, index) => {
          const artistName = artist.name || artist.title;
          return <article className="genre-directory-card" key={artist.id || artistName}>
@@ -95,7 +119,8 @@ function GenreDirectoryPage({ name, onBack, onViewArtist }) {
            <div className="genre-directory-card__body"><h2>{artistName}</h2><p>Cantor(a) ou banda · {name}</p><small>{artist.provider || "Seleção de artistas brasileiros"}{artist.country ? ` · ${artist.country === "BR" ? "Brasil" : artist.country}` : " · Brasil"}</small>
            <button onClick={() => onViewArtist(artistName)}>Ver músicas <ChevronRight size={17}/></button></div>
          </article>;
-       })}</div> : <div className="genre-directory-status">Nenhum artista corresponde à sua pesquisa.</div>}
+       })}</div> : <div className="genre-directory-status">{remoteArtistError || (filter.trim().length >= 2 && remoteArtistLoading ? "Buscando artista..." : "Nenhum artista encontrado com esse nome. Tente outra grafia.")}</div>}
+      {remoteArtistError && visibleArtists.length > 0 && <div className="genre-directory-status">{remoteArtistError}</div>}
     </main>
     <footer className="genre-directory-footer"><button onClick={onBack}><ChevronRight size={16}/> Voltar à página inicial</button><span>Site Músicas · Letras que tocam você</span></footer>
   </div>;
