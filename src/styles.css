@@ -1052,3 +1052,50 @@ body{background:#f7f8fc;color:var(--sl-ink)}
   .portal-artist-result .portal-result__info h3 { font-size: 12px !important; }
   .portal-artist-result .portal-result__open { font-size: 11px !important; }
 }
+
+/* Cifras e instrumentos */
+.reference-song-workspace { padding: 0 !important; overflow: hidden; }
+.reference-song-tabs { display:flex; align-items:center; gap:8px; padding:14px 18px 0; border-bottom:1px solid #e5eaf2; background:#fff; }
+.reference-song-tabs button { display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:44px; padding:0 15px; border:0; border-bottom:3px solid transparent; border-radius:9px 9px 0 0; background:transparent; color:#65718a; cursor:pointer; font:inherit; font-size:13px; font-weight:750; }
+.reference-song-tabs button.is-active { border-bottom-color:#7552ef; color:#5f3bd3; background:#f7f4ff; }
+.reference-song-workspace > h2, .reference-song-workspace > .reference-lyrics-text, .reference-song-workspace > .reference-rights-note { margin-left:28px; margin-right:28px; }
+.reference-song-workspace > h2 { margin-top:22px; }
+.reference-song-workspace > .reference-lyrics-text { margin-bottom:25px; }
+.reference-song-workspace > .reference-rights-note { display:block; padding-bottom:22px; }
+.reference-chords-panel { padding:24px 26px 28px; }
+.reference-chords-panel h2 { margin:7px 0 8px; color:#101a30; font-size:25px; line-height:1.3; }
+.reference-chords-intro { margin:0 0 20px; color:#68758d; font-size:13px; line-height:1.65; }
+.reference-instrument-picker { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin:0 0 18px; }
+.reference-instrument-picker button { display:flex; align-items:center; justify-content:center; gap:7px; min-height:47px; padding:8px; border:1px solid #e0e5ef; border-radius:11px; background:#fff; color:#34415a; cursor:pointer; font:inherit; font-size:12px; font-weight:750; }
+.reference-instrument-picker button.is-active { border-color:#7552ef; background:#f3efff; color:#5f3bd3; box-shadow:inset 0 0 0 1px #7552ef; }
+.reference-chords-search { display:flex; align-items:center; justify-content:center; gap:9px; min-height:48px; padding:10px 15px; border-radius:11px; background:#ffd900; color:#17152a !important; text-align:center; text-decoration:none !important; font-size:13px; font-weight:800; }
+.reference-chords-search:hover { filter:brightness(.97); }
+.reference-chords-editor { margin-top:23px; }
+.reference-chords-editor > label { display:block; margin-bottom:8px; color:#27324a; font-size:13px; font-weight:800; }
+.reference-chords-editor textarea { display:block; box-sizing:border-box; width:100%; resize:vertical; min-height:105px; padding:13px; border:1px solid #dfe5ef; border-radius:10px; background:#fbfcff; color:#17233b; font:inherit; font-size:14px; line-height:1.65; outline-color:#7552ef; }
+.reference-chords-tools { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:13px; margin-top:14px; }
+.reference-transpose-controls { display:flex; flex-wrap:wrap; align-items:center; gap:8px; color:#536078; font-size:12px; }
+.reference-transpose-controls > span { font-weight:800; margin-right:3px; }
+.reference-transpose-controls button { min-width:34px; height:34px; padding:0 9px; border:1px solid #dfe5ef; border-radius:8px; background:#fff; color:#34314b; cursor:pointer; font-weight:800; }
+.reference-transpose-controls strong { min-width:100px; color:#5f3bd3; text-align:center; }
+.reference-capo-control { display:flex !important; align-items:center; gap:8px; margin:0 !important; font-size:12px !important; }
+.reference-capo-control select { max-width:145px; min-height:35px; padding:0 8px; border:1px solid #dfe5ef; border-radius:8px; background:#fff; color:#26334a; }
+.reference-transposed-output { margin-top:16px; padding:15px; border:1px solid #e6e0fb; border-radius:11px; background:#faf8ff; }
+.reference-transposed-output > strong { display:block; margin-bottom:9px; color:#5f3bd3; font-size:12px; }
+.reference-transposed-output pre { margin:0 0 12px; overflow-wrap:anywhere; white-space:pre-wrap; color:#19233b; font-family:ui-monospace,SFMono-Regular,Consolas,monospace; font-size:15px; line-height:1.8; }
+.reference-transposed-output button { padding:9px 13px; border:0; border-radius:8px; background:#7552ef; color:#fff; cursor:pointer; font-size:12px; font-weight:800; }
+.reference-chords-note { display:flex; align-items:flex-start; gap:12px; margin-top:17px; padding:15px; border:1px solid #f0e4b5; border-radius:11px; background:#fffbeb; color:#705b16; }
+.reference-chords-note > svg { flex-shrink:0; margin-top:2px; }
+.reference-chords-note strong { display:block; font-size:13px; }
+.reference-chords-note p { margin:5px 0 0; font-size:12px; line-height:1.65; }
+.reference-instrument-tip { margin-top:15px; color:#68758d; font-size:12px; line-height:1.65; }
+.reference-instrument-tip strong { color:#34415a; }
+@media(max-width:680px) {
+  .reference-song-tabs { padding:10px 10px 0; gap:4px; }
+  .reference-song-tabs button { min-height:40px; padding:0 10px; font-size:12px; }
+  .reference-song-workspace > h2, .reference-song-workspace > .reference-lyrics-text, .reference-song-workspace > .reference-rights-note { margin-left:16px; margin-right:16px; }
+  .reference-chords-panel { padding:19px 15px 21px; }
+  .reference-chords-panel h2 { font-size:21px; }
+  .reference-instrument-picker { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .reference-chords-tools { align-items:flex-start; flex-direction:column; }
+}
