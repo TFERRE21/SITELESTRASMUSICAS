@@ -260,6 +260,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
   const [chordCatalogStatus, setChordCatalogStatus] = useState("idle");
   const [chordCatalogMessage, setChordCatalogMessage] = useState("");
   const [savingChord, setSavingChord] = useState(false);
+  const [generatingChord, setGeneratingChord] = useState(false);
   const chordNames = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
   const chordAliases = { Db: "C#", Eb: "D#", Gb: "F#", Ab: "G#", Bb: "A#", "A#": "A#", "D#": "D#", "G#": "G#" };
   const transposeChordText = (text, steps) => String(text || "").replace(/\b([A-G])([#b]?)(maj7|maj|min|m7|m|dim|aug|sus2|sus4|sus|add9|7M|7|9|11|13|°|ø)?(\/[A-G][#b]?)?\b/g, (whole, root, accidental, quality = "", bass = "") => {
@@ -307,6 +308,29 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
       });
     return () => { cancelled = true; };
   }, [songView, lyrics?.title, lyrics?.artist, instrument]);
+
+  const generateChordSuggestion = async () => {
+    setGeneratingChord(true);
+    setChordCatalogMessage("");
+    try {
+      const response = await fetch("/api/chords/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ title: lyrics.title, artist: lyrics.artist, instrument })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Não foi possível gerar uma sugestão de cifra.");
+      setChordInput(data.chord.content || "");
+      setTransposeBy(0);
+      setChordCatalogStatus("found");
+      setChordCatalogMessage("Sugestão de acordes gerada por IA e salva no catálogo interno. Confira antes de tocar.");
+    } catch (error) {
+      setChordCatalogStatus("error");
+      setChordCatalogMessage(error.message || "Não foi possível gerar uma sugestão de cifra.");
+    } finally {
+      setGeneratingChord(false);
+    }
+  };
 
   const publishChordToCatalog = async () => {
     if (!chordInput.trim()) {
@@ -411,6 +435,8 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
               </div>
               <div className="reference-chords-catalog-status" role="status"><Music2 size={18}/><span>{chordCatalogStatus === "loading" ? "Consultando catálogo interno..." : chordCatalogMessage || (chordCatalogStatus === "found" ? "Cifra disponível no site." : "Catálogo interno de cifras")}</span></div>
               <div className="reference-chords-editor">
+                <button type="button" className="reference-chords-generate" onClick={generateChordSuggestion} disabled={generatingChord}>{generatingChord ? "Gerando sugestão..." : "Gerar sugestão de acordes com IA"}</button>
+                <small className="reference-chords-ai-note">A IA cria uma sugestão harmônica, não uma transcrição oficial. Confira os acordes antes de usar.</small>
                 <label htmlFor="chord-input">Se já tiver os acordes, cole aqui</label>
                 <textarea id="chord-input" value={chordInput} onChange={(event) => { setChordInput(event.target.value); setTransposeBy(0); }} placeholder={"Ex.: Am  F  C  G\nCole aqui a sequência de acordes ou a cifra com a letra."} rows={4}/>
                 <div className="reference-chords-tools">
