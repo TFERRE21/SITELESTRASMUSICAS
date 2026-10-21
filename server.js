@@ -13,6 +13,7 @@ const usersFile = path.join(dataDir, "users.json");
 const sessionsFile = path.join(dataDir, "sessions.json");
 const ticketsFile = path.join(dataDir, "support-tickets.json");
 const commentsFile = path.join(dataDir, "song-comments.json");
+const chordsFile = path.join(dataDir, "song-chords.json");
 const PORT = Number(process.env.PORT || 3000);
 const USER_AGENT = "SomELetra/0.2 (https://github.com/TFERRE21/SITELESTRASMUSICAS)";
 let cachedCatalog = [];
@@ -274,6 +275,35 @@ const server = http.createServer(async (req, res) => {
       users[index].favorites = favorites; await writeJsonFile(usersFile, users);
       return json(res, 200, { favorites });
     } catch (error) { return json(res, 400, { error: error.message || "Não foi possível salvar favoritos." }); }
+  }
+  if (url.pathname === "/api/chords" && req.method === "GET") {
+    const title = String(url.searchParams.get("title") || "").trim().slice(0, 200);
+    const artist = String(url.searchParams.get("artist") || "").trim().slice(0, 200);
+    const instrument = String(url.searchParams.get("instrument") || "Violão").trim().slice(0, 40);
+    if (!title || !artist) return json(res, 400, { error: "Informe o título da música e o artista." });
+    const key = (value) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+    const chords = await readJsonFile(chordsFile, []);
+    const chord = chords.find((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument)) || null;
+    return json(res, 200, { chord, total: chords.length });
+  }
+  if (url.pathname === "/api/chords" && req.method === "POST") {
+    try {
+      const body = await readBody(req);
+      const title = String(body.title || "").trim().slice(0, 200);
+      const artist = String(body.artist || "").trim().slice(0, 200);
+      const instrument = String(body.instrument || "Violão").trim().slice(0, 40);
+      const content = String(body.content || "").trim().slice(0, 12000);
+      if (!title || !artist || !content || content.length < 3) return json(res, 400, { error: "Informe música, artista e uma cifra com pelo menos 3 caracteres." });
+      const allowedInstruments = ["Violão", "Guitarra", "Teclado", "Piano", "Baixo", "Bateria", "Ukulele"];
+      if (!allowedInstruments.includes(instrument)) return json(res, 400, { error: "Instrumento não reconhecido." });
+      const key = (value) => value.normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+      const chords = await readJsonFile(chordsFile, []);
+      const index = chords.findIndex((item) => key(item.title) === key(title) && key(item.artist) === key(artist) && key(item.instrument) === key(instrument));
+      const chord = { id: index >= 0 ? chords[index].id : randomBytes(12).toString("hex"), title, artist, instrument, content, updatedAt: new Date().toISOString() };
+      if (index >= 0) chords[index] = chord; else chords.push(chord);
+      await writeJsonFile(chordsFile, chords.slice(-10000));
+      return json(res, 201, { chord, total: chords.length });
+    } catch (error) { return json(res, 400, { error: error.message || "Não foi possível salvar a cifra." }); }
   }
   if (url.pathname === "/api/comments" && req.method === "GET") {
     const title = String(url.searchParams.get("title") || "").trim().slice(0, 200);
