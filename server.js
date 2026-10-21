@@ -142,19 +142,38 @@ async function lrclib(pathname, params = {}) {
 
 async function lyricsOvh(title, artist) {
   if (!title || !artist) return null;
-  const url = `https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(title)}`;
-  try {
-    const response = await fetch(url, {
-      headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
-      signal: AbortSignal.timeout(10000)
-    });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    const lyrics = typeof payload.lyrics === "string" ? payload.lyrics.trim() : "";
-    return lyrics ? { lyrics, provider: "Lyrics.ovh", providerUrl: url } : null;
-  } catch {
-    return null;
+  const cleanTitle = (value) => String(value || "")
+    .replace(/\s*\[(?:ao vivo|live|acoustic|acústico)[^\]]*\]/ig, "")
+    .replace(/\s*\((?:ao vivo|live|acoustic|acústico)[^)]*\)/ig, "")
+    .replace(/\s*\((?:feat\.?|ft\.?|part\.?|participação)[^)]*\)/ig, "")
+    .replace(/\s*[-–—]\s*(?:ao vivo|live).*$/ig, "")
+    .replace(/\s+/g, " ").trim();
+  const cleanArtist = (value) => String(value || "")
+    .replace(/\s*\[(?:feat\.?|ft\.?|part\.?)[^\]]*\]/ig, "")
+    .replace(/\s*\((?:feat\.?|ft\.?|part\.?)[^)]*\)/ig, "").trim();
+  const titles = [...new Set([String(title).trim(), cleanTitle(title)].filter(Boolean))];
+  const artists = [...new Set([String(artist).trim(), cleanArtist(artist)].filter(Boolean))];
+  // Also try featured artists parsed from the track title/artist metadata.
+  const featured = String(title + " " + artist).match(/\b(?:feat\.?|ft\.?|part\.?|participação)\s+([^)\]]+)/i)?.[1]?.trim();
+  if (featured) artists.push(featured);
+  for (const candidateArtist of [...new Set(artists)]) {
+    for (const candidateTitle of titles) {
+      const url = "https://api.lyrics.ovh/v1/" + encodeURIComponent(candidateArtist) + "/" + encodeURIComponent(candidateTitle);
+      try {
+        const response = await fetch(url, {
+          headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+          signal: AbortSignal.timeout(8000)
+        });
+        if (!response.ok) continue;
+        const payload = await response.json();
+        const lyrics = typeof payload.lyrics === "string" ? payload.lyrics.trim() : "";
+        if (lyrics) return { lyrics, provider: "Lyrics.ovh", providerUrl: url };
+      } catch {
+        // Try the next title/artist variation if this lookup fails.
+      }
+    }
   }
+  return null;
 }
 
 function normalizeTrack(track) {
