@@ -556,6 +556,91 @@ const server = http.createServer(async (req, res) => {
         updatedAt: "2026-10-21T00:00:00.000Z"
       };
     }
+    // Local chord-only reference for a common song whose external providers often return empty results.
+    // It intentionally contains no lyrics and is labelled as a simplified study arrangement.
+    if (!chord && normalizedTitle.includes("ressuscita me") && normalizedArtist.includes("aline barros")) {
+      const instrumentGuides = {
+        "Violão": [
+          "INSTRUMENTO: VIOLÃO · REFERÊNCIA SIMPLIFICADA · TOM D",
+          "INTRO: C6  G/B  Bb6  D  A",
+          "ESTROFE: D  A  Bm  G (repetir)",
+          "PASSAGEM: G  D/F#  Em  Em/D#  Em/D  C#m7(b5)  G",
+          "PRÉ-REFRÃO: D  A/C#  Bm  Bm/A  G  D/F#  Em  A  A4",
+          "REFRÃO: D  A  Bm  G  D/F#  G  A  C9  G/B  A  D",
+          "PONTE: D  A/C#  Bm  G (repetir)",
+          "FINAL / SUBIDA: E  B  C#m  A  E/G#  A  B  D  A/C#  E",
+          "ACORDES SIMPLIFICADOS: D (xx0232), A (x02220), Bm (x24432), G (320003), Em (022000), C (x32010)."
+        ],
+        "Guitarra": [
+          "INSTRUMENTO: GUITARRA · BASE SIMPLIFICADA · TOM D",
+          "INTRO: C6  G/B  Bb6  D  A",
+          "ESTROFE: D  A  Bm  G (repetir)",
+          "PRÉ-REFRÃO: D  A/C#  Bm  Bm/A  G  D/F#  Em  A  A4",
+          "REFRÃO: D  A  Bm  G  D/F#  G  A  C9  G/B  A  D",
+          "PONTE: D  A/C#  Bm  G (repetir)",
+          "DINÂMICA: comece limpo nas estrofes; abra a base no refrão. Use D5, A5, B5 e G5 se preferir power chords."
+        ],
+        "Teclado": [
+          "INSTRUMENTO: TECLADO · TOM D",
+          "INTRO: C6  G/B  Bb6  D  A",
+          "ESTROFE: D  A  Bm  G (repetir)",
+          "PRÉ-REFRÃO: D  A/C#  Bm  Bm/A  G  D/F#  Em  A  A4",
+          "REFRÃO: D  A  Bm  G  D/F#  G  A  C9  G/B  A  D",
+          "PONTE: D  A/C#  Bm  G (repetir)",
+          "MÃO ESQUERDA: toque a fundamental ou a inversão indicada após a barra. MÃO DIREITA: tríades e extensões (C6, A4, C9) conforme seu nível."
+        ],
+        "Piano": [
+          "INSTRUMENTO: PIANO · TOM D",
+          "INTRO: C6  G/B  Bb6  D  A",
+          "ESTROFE: D  A  Bm  G (repetir)",
+          "PRÉ-REFRÃO: D  A/C#  Bm  Bm/A  G  D/F#  Em  A  A4",
+          "REFRÃO: D  A  Bm  G  D/F#  G  A  C9  G/B  A  D",
+          "PONTE: D  A/C#  Bm  G (repetir)",
+          "SUGESTÃO: mão esquerda nas fundamentais; mão direita em tríades/inversões. A sequência é uma referência de estudo simplificada."
+        ],
+        "Baixo": [
+          "INSTRUMENTO: BAIXO · TOM D",
+          "INTRO: C  B  Bb  D  A",
+          "ESTROFE: D  A  B  G (repetir)",
+          "PRÉ-REFRÃO: D  C#  B  A  G  F#  E  A",
+          "REFRÃO: D  A  B  G  F#  G  A  C  B  A  D",
+          "PONTE: D  C#  B  G (repetir)",
+          "ESTUDO: pratique primeiro as fundamentais no tempo; acrescente aproximações cromáticas apenas se combinar com a banda."
+        ],
+        "Bateria": [
+          "INSTRUMENTO: BATERIA · GUIA RÍTMICO DE ESTUDO",
+          "ESTROFE: groove leve em 4/4, chimbal fechado, caixa nos tempos 2 e 4, bumbo econômico.",
+          "PRÉ-REFRÃO: aumente gradualmente a intensidade e abra o chimbal no final das frases.",
+          "REFRÃO: groove pop/adoração em 4/4 com bumbo firme, caixa nos tempos 2 e 4 e crash na entrada.",
+          "PONTE: reduza a dinâmica e construa a volta para o refrão.",
+          "Observação: guia rítmico sugerido, não uma transcrição da gravação."
+        ],
+        "Ukulele": [
+          "INSTRUMENTO: UKULELE · VERSÃO SIMPLIFICADA · TOM D",
+          "INTRO: C  G  Bb  D  A (Bb pode ser omitido para iniciantes)",
+          "ESTROFE: D  A  Bm  G (repetir)",
+          "PRÉ-REFRÃO: D  A  Bm  G  A",
+          "REFRÃO: D  A  Bm  G  D  G  A  D",
+          "PONTE: D  A  Bm  G (repetir)",
+          "BATIDA DE ESTUDO: ↓ ↓↑ ↑↓↑; use Bm simplificado se necessário."
+        ]
+      };
+      chord = {
+        id: "builtin-ressuscita-me-aline-barros",
+        title: "Ressuscita-me",
+        artist: "Aline Barros",
+        instrument,
+        content: [
+          "REFERÊNCIA INTERNA SIMPLIFICADA · RESSUSCITA-ME — ALINE BARROS",
+          ...(instrumentGuides[instrument] || instrumentGuides["Violão"]),
+          "",
+          "Aviso: guia de acordes para estudo, sem letra e sem pretensão de reproduzir exatamente a gravação ao vivo.",
+          "Fonte para conferir a versão completa: https://www.cifraclub.com.br/aline-barros/ressuscita-me/"
+        ].join("\\n"),
+        source: "catalogo-interno-referencia",
+        updatedAt: new Date().toISOString()
+      };
+    }
     return json(res, 200, { chord, externalMatches, diagnostics: providerDiagnostics, total: chords.length + (chord?.source === "catalogo-interno-referencia" ? 1 : 0) });
   }
   if (url.pathname === "/api/chords" && req.method === "POST") {
