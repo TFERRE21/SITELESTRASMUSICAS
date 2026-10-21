@@ -20,7 +20,7 @@ function Brand({ onClick }) {
   </a>;
 }
 
-function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, onPrint, onDownload, onShare, onVideo, onListen, onSave, saved, catalog, onOpen, fontScale, setFontScale, account, comments, commentsLoading, commentText, setCommentText, onSubmitComment, commentError, commentNotice }) {
+function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, onPrint, onDownload, onShare, onVideo, onListen, onSave, saved, catalog, onOpen, fontScale, setFontScale, account, comments, commentsLoading, commentText, setCommentText, onSubmitComment, commentError, commentNotice, audioRef, isPreviewPlaying, previewTime, previewDuration, onSeekPreview }) {
   const artistItems = catalog.filter((item) => normalize(item.artist) === normalize(lyrics.artist) && normalize(item.title) !== normalize(lyrics.title)).slice(0, 5);
   const relatedItems = catalog.filter((item) => normalize(item.title) !== normalize(lyrics.title) && normalize(item.artist) !== normalize(lyrics.artist) && (lyrics.genre ? normalize(item.genre || item.genres?.[0]?.name).includes(normalize(lyrics.genre)) : true)).slice(0, 5);
   const hasLyrics = Boolean(lyrics.text && !/^(carregando letra|letra indisponível|letra não encontrada|não foi possível carregar)/i.test(lyrics.text.trim()));
@@ -37,6 +37,12 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
             <div className="reference-song-actions"><button className="reference-yellow" onClick={onListen}><Play size={16} fill="currentColor"/> Ouvir</button><button onClick={onPrint}><Printer size={16}/> Imprimir</button><button onClick={onDownload} disabled={!hasLyrics}><Download size={16}/> Baixar (PDF)</button><button onClick={onShare}><Share2 size={16}/> Compartilhar</button><span className="reference-font-controls"><button onClick={()=>setFontScale(Math.max(.8,fontScale-.1))} aria-label="Diminuir fonte">A-</button><button onClick={()=>setFontScale(Math.min(1.4,fontScale+.1))} aria-label="Aumentar fonte">A+</button></span><button className={saved ? "reference-save is-saved" : "reference-save"} onClick={onSave}><Heart size={17} fill={saved ? "currentColor" : "none"}/> Favoritar</button></div>
           </div>
         </section>
+        {lyrics.previewUrl ? <section className="reference-inline-player" aria-label="Reprodutor de prévia musical">
+          <audio ref={audioRef} src={lyrics.previewUrl} preload="metadata" onTimeUpdate={(event)=>setPreviewTime(event.currentTarget.currentTime)} onLoadedMetadata={(event)=>setPreviewDuration(event.currentTarget.duration || 0)} onEnded={()=>setIsPreviewPlaying(false)} />
+          <div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>{isPreviewPlaying ? "Reproduzindo prévia" : "Ouvir prévia da música"}</strong><small>Prévia disponibilizada pelo catálogo musical</small></div><button type="button" onClick={onListen} className="reference-yellow">{isPreviewPlaying ? "Pausar" : "Tocar"}</button></div>
+          <div className="reference-inline-player__timeline"><span>{Math.floor(previewTime/60)}:{String(Math.floor(previewTime%60)).padStart(2,"0")}</span><input type="range" min="0" max={Math.max(1,previewDuration)} step="0.1" value={Math.min(previewTime,previewDuration || 0)} onChange={(event)=>onSeekPreview(Number(event.target.value))} aria-label="Avançar ou retroceder na prévia"/><span>{Math.floor(previewDuration/60)}:{String(Math.floor(previewDuration%60)).padStart(2,"0")}</span></div>
+          <p className="reference-inline-player__notice">Esta é uma prévia de áudio fornecida pelo catálogo, não a reprodução integral da faixa.</p>
+        </section> : <section className="reference-inline-player reference-inline-player--notice"><div className="reference-inline-player__top"><span className="reference-inline-player__disc"><AudioLines size={19}/></span><div><strong>Reprodução pela fonte oficial</strong><small>Quando disponível, o vídeo abre incorporado nesta página.</small></div><button type="button" onClick={onListen} className="reference-yellow">{video ? "Ir ao player" : videoLoading ? "Carregando..." : "Carregar player"}</button></div><p className="reference-inline-player__notice">A faixa completa pode não oferecer prévia de áudio neste catálogo. Para respeitar as regras da plataforma, vídeos do YouTube são exibidos no player oficial incorporado, com seus controles e identificação.</p></section>}
         <div className="reference-song-grid">
           <section className="reference-lyrics-card"><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></section>
           <section className="reference-video-column">
@@ -104,6 +110,9 @@ export default function App() {
   const [ticketLookupResult, setTicketLookupResult] = useState(null);
   const [ticketLookupError, setTicketLookupError] = useState("");
   const [songFontScale, setSongFontScale] = useState(1);
+  const [isPreviewPlaying, setIsPreviewPlaying] = useState(false);
+  const [previewTime, setPreviewTime] = useState(0);
+  const [previewDuration, setPreviewDuration] = useState(0);
   const [newsletterNotice, setNewsletterNotice] = useState("");
   const [comments, setComments] = useState([]);
   const [commentsLoading, setCommentsLoading] = useState(false);
@@ -192,19 +201,23 @@ export default function App() {
   };
   const listenToCurrentSong = async () => {
     if (!lyrics) return;
-    if (lyrics.previewUrl) {
+    if (lyrics.previewUrl && audioRef.current) {
       try {
-        if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; }
-        const audio = new Audio(lyrics.previewUrl);
-        audioRef.current = audio;
-        await audio.play();
+        if (isPreviewPlaying) { audioRef.current.pause(); setIsPreviewPlaying(false); }
+        else { await audioRef.current.play(); setIsPreviewPlaying(true); }
         return;
-      } catch { /* fall back to the associated video */ }
+      } catch { setIsPreviewPlaying(false); }
     }
-    if (video?.videoId) { window.open("https://www.youtube.com/watch?v=" + encodeURIComponent(video.videoId), "_blank", "noopener,noreferrer"); return; }
-    const query = encodeURIComponent(lyrics.title + " " + lyrics.artist + " official");
-    window.open("https://www.youtube.com/results?search_query=" + query, "_blank", "noopener,noreferrer");
+    if (video?.videoId) {
+      document.querySelector(".reference-video-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
     if (!videoLoading) loadMusicVideo();
+  };
+  const seekPreview = (time) => {
+    if (!audioRef.current || !Number.isFinite(time)) return;
+    audioRef.current.currentTime = time;
+    setPreviewTime(time);
   };
   const loadMusicVideo = async () => {
     if (!lyrics) return;
@@ -274,6 +287,8 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
       }
       window.history.pushState({ song: true }, "", `?${params.toString()}`);
     }
+    if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
+    setIsPreviewPlaying(false); setPreviewTime(0); setPreviewDuration(0);
     setVideo(null);
     setVideoError("");
     setLyricsLoading(true);
@@ -426,7 +441,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     <button className="portal-support-fab" onClick={() => setSupportOpen(true)} aria-label="Abrir suporte"><LifeBuoy size={20}/><span>Suporte</span></button>
     {profileOpen && <div className="portal-overlay" role="dialog" aria-modal="true" aria-label="Meus Dados"><section className="portal-panel"><button className="portal-panel-close" onClick={() => setProfileOpen(false)} aria-label="Fechar"><X/></button>{account ? <><div className="portal-profile-heading"><div className="portal-avatar"><CircleUserRound size={32}/></div><div><span className="portal-kicker">SEU ESPAÇO MUSICAL</span><h2>Olá, {account.name}</h2><p>{account.email}</p></div></div><div className="portal-profile-stats"><div><Heart size={18}/><strong>{saved.length}</strong><span>Favoritos</span></div><div><ListMusic size={18}/><strong>—</strong><span>Playlists</span></div></div><h3>Minhas músicas favoritas</h3>{saved.length ? <div className="portal-saved-list">{saved.map((item) => <div key={item.id} className="portal-saved-item"><Cover item={item}/><div><strong>{item.title}</strong><span>{item.artist}</span></div><button onClick={() => toggleSaved(item)} aria-label="Remover dos favoritos"><X size={16}/></button></div>)}</div> : <p className="portal-muted">Ainda não há favoritos salvos na sua conta.</p>}<button className="portal-primary-button" onClick={signOut}><LogOut size={17}/> Sair da conta</button></> : <><div className="portal-profile-heading"><div className="portal-avatar"><UserRound size={30}/></div><div><span className="portal-kicker">MEUS DADOS</span><h2>{authMode === "register" ? "Entre no seu universo musical" : "Bem-vindo de volta"}</h2><p>Salve favoritos e personalize sua experiência.</p></div></div><div className="portal-auth-tabs"><button className={authMode === "register" ? "active" : ""} onClick={() => {setAuthMode("register");setAuthError("");}}>Criar conta</button><button className={authMode === "login" ? "active" : ""} onClick={() => {setAuthMode("login");setAuthError("");}}>Já tenho conta</button></div><form className="portal-form" onSubmit={submitAuth}>{authMode === "register" && <label>Nome<input value={authName} onChange={e=>setAuthName(e.target.value)} autoComplete="name" required minLength={2} maxLength={80}/></label>}<label>E-mail<input type="email" value={authEmail} onChange={e=>setAuthEmail(e.target.value)} autoComplete="email" required/></label><label>Senha<input type="password" value={authPassword} onChange={e=>setAuthPassword(e.target.value)} autoComplete={authMode === "register" ? "new-password" : "current-password"} minLength={authMode === "register" ? 10 : 1} required/><small>{authMode === "register" ? "Use pelo menos 10 caracteres." : "Digite sua senha para entrar."}</small></label><p className="portal-muted">Ao continuar, você concorda com os termos de uso e a política de privacidade.</p>{authError && <p className="portal-form-error">{authError}</p>}<button className="portal-primary-button" disabled={authBusy}>{authBusy ? "Aguarde..." : authMode === "register" ? "Criar minha conta" : "Entrar"} <ArrowRight size={17}/></button></form><p className="portal-muted portal-small-note">A recuperação de senha por e-mail depende da configuração de um serviço de envio.</p></>}</section></div>}
     {supportOpen && <div className="portal-overlay portal-overlay--support" role="dialog" aria-modal="true" aria-label="Central de suporte"><section className="portal-panel"><button className="portal-panel-close" onClick={() => setSupportOpen(false)} aria-label="Fechar"><X/></button><div className="portal-profile-heading"><div className="portal-avatar"><LifeBuoy size={28}/></div><div><span className="portal-kicker">CENTRAL DE ATENDIMENTO</span><h2>Como podemos ajudar?</h2><p>Envie sua solicitação e receba um protocolo.</p></div></div>{ticketResult ? <div className="portal-ticket-success"><span>Chamado registrado</span><strong>{ticketResult.protocol}</strong><p>Status: {ticketResult.status}</p><button className="portal-primary-button" onClick={() => setTicketResult(null)}>Abrir outro chamado</button></div> : <form className="portal-form" onSubmit={submitSupport}><label>Assunto<select value={supportSubject} onChange={e=>setSupportSubject(e.target.value)}>{["Problemas com músicas ou letras","Ajuda com cadastro e login","Minhas músicas favoritas","Problemas técnicos","Sugestões de melhorias","Direitos autorais e conteúdo","Outros assuntos"].map(x=><option key={x}>{x}</option>)}</select></label>{!account && <label>E-mail para contato<input type="email" value={supportEmail} onChange={e=>setSupportEmail(e.target.value)} required/></label>}<label>Descreva como podemos ajudar<textarea value={supportDescription} onChange={e=>setSupportDescription(e.target.value)} minLength={10} maxLength={5000} rows={5} required placeholder="Conte o que aconteceu..."/></label>{supportError && <p className="portal-form-error">{supportError}</p>}<button className="portal-primary-button" disabled={supportBusy}>{supportBusy ? "Enviando..." : "Enviar solicitação"} <Send size={17}/></button></form>}<div className="portal-support-help"><strong>Consultar chamado</strong><form className="portal-ticket-lookup" onSubmit={lookupTicket}><input value={ticketProtocol} onChange={e=>setTicketProtocol(e.target.value)} placeholder="Protocolo SL-..." required={!account}/>{!account && <input type="email" value={ticketEmailLookup} onChange={e=>setTicketEmailLookup(e.target.value)} placeholder="E-mail usado no chamado" required/>}<button className="portal-primary-button">Consultar status</button></form>{ticketLookupError && <p className="portal-form-error">{ticketLookupError}</p>}{ticketLookupResult && (ticketLookupResult.length ? ticketLookupResult.map(t=><div className="portal-ticket-status" key={t.protocol}><strong>{t.protocol} · {t.status}</strong><span>{t.subject}</span>{t.messages?.map((m,i)=><p key={i}>{m.text}</p>)}</div>) : <p>Nenhum chamado encontrado com esses dados.</p>)}</div></section></div>}
-    {lyrics && <MusicPage key={lyrics.id || lyrics.title} lyrics={lyrics} loading={lyricsLoading} video={video} videoLoading={videoLoading} videoError={videoError} onBack={backToPortal} onPrint={()=>window.print()} onDownload={downloadCurrentSong} onShare={shareCurrentSong} onVideo={loadMusicVideo} onListen={listenToCurrentSong} onSave={saveCurrentSong} saved={saved.some(item=>item.id===lyrics.id)} catalog={songCatalog} onOpen={openLyrics} fontScale={songFontScale} setFontScale={setSongFontScale} account={account} comments={comments} commentsLoading={commentsLoading} commentText={commentText} setCommentText={setCommentText} onSubmitComment={submitSongComment} commentError={commentError} commentNotice={commentNotice}/>}
+    {lyrics && <MusicPage key={lyrics.id || lyrics.title} lyrics={lyrics} loading={lyricsLoading} video={video} videoLoading={videoLoading} videoError={videoError} onBack={backToPortal} onPrint={()=>window.print()} onDownload={downloadCurrentSong} onShare={shareCurrentSong} onVideo={loadMusicVideo} onListen={listenToCurrentSong} onSave={saveCurrentSong} saved={saved.some(item=>item.id===lyrics.id)} catalog={songCatalog} onOpen={openLyrics} fontScale={songFontScale} setFontScale={setSongFontScale} account={account} comments={comments} commentsLoading={commentsLoading} commentText={commentText} setCommentText={setCommentText} onSubmitComment={submitSongComment} commentError={commentError} commentNotice={commentNotice} audioRef={audioRef} isPreviewPlaying={isPreviewPlaying} previewTime={previewTime} previewDuration={previewDuration} onSeekPreview={seekPreview}/>}
 
   </div>;
 }
