@@ -59,6 +59,39 @@ function Cover({ item, index = 0, className = "" }) {
     : <div className={`music-cover music-cover--placeholder ${className}`} style={{ background: colors[index % colors.length] }}><AudioLines size={26} /><span>VersosMusicais</span></div>;
 }
 
+function LanguageSwitcher() {
+  useEffect(() => {
+    const mount = () => {
+      if (window.google?.translate?.TranslateElement) {
+        if (!document.querySelector("#google_translate_element .goog-te-combo")) {
+          new window.google.translate.TranslateElement({
+            pageLanguage: "pt",
+            includedLanguages: "en,es,fr,it,de",
+            autoDisplay: false
+          }, "google_translate_element");
+        }
+        return true;
+      }
+      return false;
+    };
+
+    if (mount()) return;
+    window.googleTranslateElementInit = mount;
+    if (!document.querySelector('script[data-versos-google-translate]')) {
+      const script = document.createElement("script");
+      script.src = "https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit";
+      script.async = true;
+      script.dataset.versosGoogleTranslate = "true";
+      document.head.appendChild(script);
+    }
+  }, []);
+
+  return <div className="language-switcher" aria-label="Trocar idioma">
+    <span aria-hidden="true">🌐</span>
+    <div id="google_translate_element"><span className="language-switcher__label">Idioma</span></div>
+  </div>;
+}
+
 function Brand({ onClick }) {
   return <a className="reference-brand" href="#inicio" onClick={onClick} aria-label="VersosMusicais — Início">
     <img className="reference-brand__logo" src="/versos-musicais-logo.svg" alt="VersosMusicais — Letras que tocam você" />
@@ -1043,7 +1076,7 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     <header className="portal-header">
       <a className="portal-brand" href="/" onClick={(e) => { e.preventDefault(); navigateSection("home"); }} aria-label="VersosMusicais início"><img className="portal-brand__logo" src="/versos-musicais-logo.svg" alt="VersosMusicais — Letras que tocam você" /></a>
       
-      <div className="portal-header-actions"><button className="portal-login-link" onClick={() => {setAuthMode("login");setProfileOpen(true);}}><UserRound size={14}/> Entrar</button><button className="portal-account-button" onClick={() => setProfileOpen(true)}>{account ? account.name.split(" ")[0] : "Meus Dados"}</button><button className="portal-mobile-menu" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">{mobileOpen ? <X/> : <Menu/>}</button></div>
+      <div className="portal-header-actions"><LanguageSwitcher /><button className="portal-login-link" onClick={() => {setAuthMode("login");setProfileOpen(true);}}><UserRound size={14}/> Entrar</button><button className="portal-account-button" onClick={() => setProfileOpen(true)}>{account ? account.name.split(" ")[0] : "Meus Dados"}</button><button className="portal-mobile-menu" onClick={() => setMobileOpen(!mobileOpen)} aria-label="Abrir menu">{mobileOpen ? <X/> : <Menu/>}</button></div>
       <nav className={mobileOpen ? "portal-nav portal-nav--open" : "portal-nav"}><a href="/" onClick={(e) => { e.preventDefault(); navigateSection("home"); }}><Home size={15}/> Início</a><a href="/letras" onClick={(e) => { e.preventDefault(); navigateSection("letras"); }}><Music2 size={15}/> Letras</a><a href="/artistas" onClick={(e) => { e.preventDefault(); navigateSection("artistas"); }}><UserRound size={15}/> Artistas</a><a href="/albuns" onClick={(e) => { e.preventDefault(); navigateSection("albuns"); }}><Disc3 size={15}/> Álbuns</a><a href="/playlists" onClick={(e) => { e.preventDefault(); navigateSection("playlists"); }}><ListMusic size={15}/> Playlists</a><a href="/em-alta" onClick={(e) => { e.preventDefault(); navigateSection("em-alta"); }}><Music2 size={15}/> Em Alta</a><a href="/generos" onClick={(e) => { e.preventDefault(); navigateSection("generos"); }}>Gêneros⌄</a><a href="/loja" onClick={(e) => { e.preventDefault(); navigateSection("loja"); }}><ShoppingBag size={15}/> Loja de Produtos</a><button onClick={() => { setSupportOpen(true); setMobileOpen(false); }}><Headphones size={15}/> Suporte</button></nav>
     </header>
 
