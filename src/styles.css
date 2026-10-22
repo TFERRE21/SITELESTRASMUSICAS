@@ -1457,3 +1457,6 @@ body{background:#f7f8fc;color:var(--sl-ink)}
   body header.portal-header > nav.portal-nav > a,
   body header.portal-header > nav.portal-nav > button{position:static!important;display:inline-flex!important;padding:7px 0!important;font-size:11px!important;white-space:nowrap!important}
 }
+
+/* Hotfix global: remove o link Inicio que sobrepoe a marca nos layouts atuais. */
+.portal-header > nav.portal-nav > a:first-child{display:none!important}
