@@ -1,2 +1,4 @@
 User-agent: *
 Allow: /
+
+Sitemap: https://versosmusicais.com.br/sitemap.xml
