@@ -1460,3 +1460,16 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 
 /* Hotfix global: remove o link Inicio que sobrepoe a marca nos layouts atuais. */
 .portal-header > nav.portal-nav > a:first-child{display:none!important}
+
+/* Identidade visual VersosMusicais */
+.portal-brand__logo{display:block;width:210px;height:auto;max-width:100%;object-fit:contain}
+.reference-brand__logo{display:block;width:250px;height:auto;max-width:100%;object-fit:contain}
+.portal-brand{flex-shrink:0}
+@media(max-width:1100px){
+  .portal-brand__logo{width:190px}
+  .reference-brand__logo{width:220px}
+}
+@media(max-width:760px){
+  .portal-brand__logo{width:174px}
+  .reference-brand__logo{width:195px}
+}
