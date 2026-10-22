@@ -105,3 +105,5 @@
 .artist-autocomplete__text small { color:#85819a; font-size:10px; }
 .artist-autocomplete__action { display:flex; align-items:center; gap:3px; color:#7544d6; font-size:11px; font-weight:800; white-space:nowrap; }
 @media(max-width:680px) { .artist-autocomplete { margin-top:-13px; } .artist-autocomplete__action { font-size:10px; } }
+.section-page-chart-source { margin: 12px 0 16px; color: #77758d; font-size: 12px; }
+.section-page-song-list>button>b { flex-shrink: 0; }
