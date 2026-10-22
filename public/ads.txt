@@ -1,2 +1,3 @@
 # Add only the exact authorized seller declaration supplied by your real advertising provider.
 # Do not publish guessed publisher IDs.
+google.com, pub-6472882150880001, DIRECT, f08c47fec0942fa0
