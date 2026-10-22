@@ -1473,3 +1473,49 @@ body{background:#f7f8fc;color:var(--sl-ink)}
   .portal-brand__logo{width:174px}
   .reference-brand__logo{width:195px}
 }
+
+/* Hero VersosMusicais — aproximação visual da referência premium enviada */
+.portal-hero--campaign{
+  min-height:clamp(390px,43vw,540px)!important;
+  background:#050a1b!important;
+}
+.portal-hero--campaign:before{
+  background-size:cover!important;
+  background-position:center right!important;
+  opacity:.94!important;
+}
+.portal-hero--campaign:after{
+  background:linear-gradient(90deg,rgba(4,8,24,.98) 0%,rgba(4,8,24,.91) 31%,rgba(7,10,32,.5) 57%,rgba(4,8,24,.08) 100%),linear-gradient(0deg,rgba(4,8,24,.48),transparent 42%)!important;
+}
+.portal-hero--campaign .portal-hero__content{
+  width:min(760px,64%)!important;
+  max-width:760px!important;
+  padding:38px clamp(24px,5vw,100px)!important;
+  padding-right:0!important;
+}
+.portal-hero--campaign .portal-kicker{font-size:11px!important;letter-spacing:3px!important;color:#e3d5ff!important}
+.portal-hero--campaign .portal-kicker>span{background:#ffd21a!important}
+.portal-hero--campaign h1{
+  max-width:780px!important;
+  font-size:clamp(38px,4.2vw,66px)!important;
+  line-height:1.02!important;
+  letter-spacing:-2px!important;
+  margin:18px 0 18px!important;
+}
+.portal-hero--campaign p{max-width:620px!important;font-size:clamp(13px,1.15vw,16px)!important;line-height:1.65!important;margin-bottom:24px!important}
+.portal-hero--campaign .portal-search{max-width:690px!important;height:58px!important;min-height:58px!important;padding:7px 7px 7px 18px!important;border-radius:16px!important;gap:12px!important;background:rgba(13,20,39,.94)!important;border-color:rgba(255,255,255,.2)!important;color:#fff!important}
+.portal-hero--campaign .portal-search input{font-size:14px!important;color:#fff!important}
+.portal-hero--campaign .portal-search input::placeholder{color:#c2c7d6!important}
+.portal-hero--campaign .portal-search button{height:44px!important;padding:0 22px!important;border-radius:12px!important;background:#ffcf16!important;color:#101323!important;font-size:13px!important;font-weight:850!important}
+.portal-hero--campaign .portal-search-hint{margin-top:15px!important;font-size:11px!important;color:#c7c9d8!important}
+.portal-hero--campaign .portal-search-hint button{background:rgba(255,255,255,.08)!important;border-color:rgba(255,255,255,.12)!important;color:#f5f4ff!important}
+@media(max-width:760px){
+  .portal-hero--campaign{min-height:420px!important}
+  .portal-hero--campaign:before{background-size:auto 110%!important;background-position:68% center!important;opacity:.56!important}
+  .portal-hero--campaign:after{background:linear-gradient(90deg,rgba(4,8,24,.94),rgba(4,8,24,.64))!important}
+  .portal-hero--campaign .portal-hero__content{width:100%!important;padding:32px 18px!important}
+  .portal-hero--campaign h1{font-size:clamp(34px,9vw,48px)!important;letter-spacing:-1.5px!important}
+  .portal-hero--campaign .portal-search{height:auto!important;min-height:52px!important;padding:6px 6px 6px 12px!important}
+  .portal-hero--campaign .portal-search input{font-size:12px!important}
+  .portal-hero--campaign .portal-search button{height:40px!important;padding:0 12px!important;font-size:11px!important}
+}
