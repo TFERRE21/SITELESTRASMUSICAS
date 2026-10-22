@@ -1135,49 +1135,14 @@ const server = http.createServer(async (req, res) => {
       sourceError = error.message || "Falha na fonte principal.";
     }
 
-    // Fallback de catálogo: Apple Music RSS mantém a seção útil se o scraper do ranking estiver indisponível.
-    // A resposta é rotulada como lista de músicas populares, não como ranking oficial do YouTube.
-    try {
-      const storefront = isGlobal ? "us" : "br";
-      const fallbackUrl = `https://rss.applemarketingtools.com/api/v2/${storefront}/music/most-played/10/songs.json`;
-      const response = await fetch(fallbackUrl, {
-        headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
-        signal: AbortSignal.timeout(10000)
-      });
-      if (!response.ok) throw new Error(`A fonte alternativa respondeu HTTP ${response.status}.`);
-      const payload = await response.json();
-      const results = Array.isArray(payload.feed?.results) ? payload.feed.results : [];
-      const items = results.map((track, index) => ({
-        id: `apple-popular-${storefront}-${track.id || index + 1}`,
-        rank: index + 1,
-        title: track.name || "Faixa sem título",
-        artist: track.artistName || "Artista não informado",
-        album: track.collectionName || "",
-        genre: track.genres?.[0]?.name || "Música",
-        genres: track.genres || [],
-        artworkUrl: track.artworkUrl100 || "",
-        url: track.url || "",
-        country: isGlobal ? "Global" : "Brasil",
-        source: "Apple Music Most Played",
-        updatedAt: new Date().toISOString()
-      }));
-      if (!items.length) throw new Error("A fonte alternativa não retornou músicas.");
-      return json(res, 200, {
-        country: storefront, items, total: items.length,
-        updatedAt: new Date().toISOString(),
-        source: "Apple Music Most Played",
-        sourceUrl: fallbackUrl,
-        note: "Lista alternativa de músicas populares da Apple Music. Não representa o ranking oficial do YouTube.",
-        fallback: true
-      });
-    } catch (fallbackError) {
-      return json(res, 502, {
-        error: "Não foi possível carregar as listas musicais agora. Tente novamente mais tarde.",
-        detail: sourceError,
-        fallbackError: fallbackError.message || "Falha na fonte alternativa.",
-        items: [], source: "music charts"
-      });
-    }
+    // Não substitua o ranking do YouTube por outra plataforma: isso confundia a origem dos dados.
+    return json(res, 502, {
+      error: "O ranking do YouTube está temporariamente indisponível para esta região. Tente novamente mais tarde.",
+      detail: sourceError,
+      items: [],
+      source: "YouTube Charts",
+      country: countrySlug
+    });
   }
   if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
