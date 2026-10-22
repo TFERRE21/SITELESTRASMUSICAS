@@ -61,21 +61,37 @@ function Cover({ item, index = 0, className = "" }) {
 
 function LanguageSwitcher() {
   useEffect(() => {
+    let observer;
+    const labelOriginalLanguage = () => {
+      const combo = document.querySelector("#google_translate_element .goog-te-combo");
+      if (!combo) return;
+      const firstOption = combo.options?.[0];
+      if (firstOption && firstOption.value === "") firstOption.textContent = "Português";
+      combo.setAttribute("aria-label", "Selecionar idioma do site");
+      combo.title = "Selecionar idioma";
+    };
+
     const mount = () => {
       if (window.google?.translate?.TranslateElement) {
         if (!document.querySelector("#google_translate_element .goog-te-combo")) {
           new window.google.translate.TranslateElement({
             pageLanguage: "pt",
-            includedLanguages: "pt,en,es,fr,it,de",
+            includedLanguages: "en,es,fr,it,de",
             autoDisplay: false
           }, "google_translate_element");
+        }
+        labelOriginalLanguage();
+        const target = document.getElementById("google_translate_element");
+        if (target && !observer) {
+          observer = new MutationObserver(labelOriginalLanguage);
+          observer.observe(target, { childList: true, subtree: true });
         }
         return true;
       }
       return false;
     };
 
-    if (mount()) return;
+    if (mount()) return () => observer?.disconnect();
     window.googleTranslateElementInit = mount;
     if (!document.querySelector('script[data-versos-google-translate]')) {
       const script = document.createElement("script");
@@ -84,6 +100,7 @@ function LanguageSwitcher() {
       script.dataset.versosGoogleTranslate = "true";
       document.head.appendChild(script);
     }
+    return () => observer?.disconnect();
   }, []);
 
   return <div className="language-switcher" aria-label="Trocar idioma">
