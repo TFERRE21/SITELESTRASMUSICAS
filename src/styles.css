@@ -1519,3 +1519,45 @@ body{background:#f7f8fc;color:var(--sl-ink)}
   .portal-hero--campaign .portal-search input{font-size:12px!important}
   .portal-hero--campaign .portal-search button{height:40px!important;padding:0 12px!important;font-size:11px!important}
 }
+
+
+/* Seletor de idioma no cabeçalho */
+.language-switcher{
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  min-width:0;
+  padding:7px 10px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:10px;
+  background:rgba(255,255,255,.06);
+  color:inherit;
+  font-size:12px;
+  line-height:1.2;
+}
+.language-switcher>span{font-size:15px}
+.language-switcher #google_translate_element{min-width:72px;max-width:125px;overflow:hidden}
+.language-switcher .language-switcher__label{white-space:nowrap;opacity:.9}
+.language-switcher .goog-te-gadget{font-family:inherit!important;font-size:0!important;color:inherit!important}
+.language-switcher .goog-te-gadget .goog-te-combo{
+  width:100%;
+  max-width:125px;
+  margin:0!important;
+  padding:3px 2px;
+  border:0;
+  outline:none;
+  background:transparent;
+  color:inherit;
+  font:inherit;
+  font-size:12px;
+  cursor:pointer;
+}
+.language-switcher .goog-te-gadget span,
+.language-switcher .goog-logo-link{display:none!important}
+body{top:0!important}
+.goog-te-banner-frame.skiptranslate{display:none!important}
+@media(max-width:760px){
+  .portal-header-actions .language-switcher{padding:5px 7px;gap:4px}
+  .portal-header-actions .language-switcher #google_translate_element{max-width:94px}
+  .portal-header-actions .language-switcher .goog-te-gadget .goog-te-combo{max-width:94px;font-size:11px}
+}
