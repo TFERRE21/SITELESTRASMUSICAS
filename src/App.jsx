@@ -66,7 +66,7 @@ function LanguageSwitcher() {
         if (!document.querySelector("#google_translate_element .goog-te-combo")) {
           new window.google.translate.TranslateElement({
             pageLanguage: "pt",
-            includedLanguages: "en,es,fr,it,de",
+            includedLanguages: "pt,en,es,fr,it,de",
             autoDisplay: false
           }, "google_translate_element");
         }
