@@ -1521,43 +1521,113 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 }
 
 
-/* Seletor de idioma no cabeçalho */
+/* Seletor de idioma — compacto, alinhado e integrado ao cabeçalho */
 .language-switcher{
+  box-sizing:border-box;
   display:inline-flex;
   align-items:center;
-  gap:7px;
-  min-width:0;
-  padding:7px 10px;
-  border:1px solid rgba(255,255,255,.18);
-  border-radius:10px;
-  background:rgba(255,255,255,.06);
+  justify-content:center;
+  gap:9px;
+  min-width:132px;
+  min-height:44px;
+  padding:6px 11px;
+  border:1px solid rgba(255,255,255,.17);
+  border-radius:12px;
+  background:rgba(255,255,255,.055);
   color:inherit;
-  font-size:12px;
-  line-height:1.2;
+  line-height:1.15;
+  vertical-align:middle;
+  transition:background .18s ease,border-color .18s ease;
 }
-.language-switcher>span{font-size:15px}
-.language-switcher #google_translate_element{min-width:72px;max-width:125px;overflow:hidden}
-.language-switcher .language-switcher__label{white-space:nowrap;opacity:.9}
-.language-switcher .goog-te-gadget{font-family:inherit!important;font-size:0!important;color:inherit!important}
-.language-switcher .goog-te-gadget .goog-te-combo{
+.language-switcher:hover{
+  background:rgba(255,255,255,.095);
+  border-color:rgba(255,255,255,.3);
+}
+.language-switcher__icon{
+  flex:0 0 auto;
+  color:#f5c842;
+  opacity:.98;
+}
+.language-switcher__content{
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  justify-content:center;
+  gap:3px;
+  min-width:0;
+}
+.language-switcher__label{
+  display:block;
+  font-size:10px;
+  font-weight:700;
+  letter-spacing:.09em;
+  line-height:1;
+  text-transform:uppercase;
+  opacity:.72;
+}
+.language-switcher__placeholder{font-size:12px;white-space:nowrap}
+.language-switcher #google_translate_element{
+  display:block;
   width:100%;
-  max-width:125px;
+  min-width:0;
+  max-width:112px;
+  overflow:hidden;
+  line-height:1;
+}
+.language-switcher .goog-te-gadget{
+  display:flex!important;
+  align-items:center;
+  font-family:inherit!important;
+  font-size:0!important;
+  color:inherit!important;
+  line-height:1!important;
+}
+.language-switcher .goog-te-gadget .goog-te-combo{
+  display:block;
+  box-sizing:border-box;
+  width:112px;
+  max-width:100%;
+  height:19px;
   margin:0!important;
-  padding:3px 2px;
+  padding:0 17px 0 0;
   border:0;
+  border-radius:0;
   outline:none;
-  background:transparent;
+  appearance:none;
+  -webkit-appearance:none;
+  background-color:transparent;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23f5c842' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;
+  background-position:right 2px center;
   color:inherit;
-  font:inherit;
-  font-size:12px;
+  font-family:inherit!important;
+  font-size:12px!important;
+  line-height:19px;
   cursor:pointer;
 }
+.language-switcher .goog-te-gadget .goog-te-combo option{
+  color:#161827;
+  background:#fff;
+}
 .language-switcher .goog-te-gadget span,
-.language-switcher .goog-logo-link{display:none!important}
+.language-switcher .goog-logo-link,
+.language-switcher .goog-te-gadget img{display:none!important}
+.language-switcher .goog-te-gadget a{display:none!important}
 body{top:0!important}
 .goog-te-banner-frame.skiptranslate{display:none!important}
 @media(max-width:760px){
-  .portal-header-actions .language-switcher{padding:5px 7px;gap:4px}
-  .portal-header-actions .language-switcher #google_translate_element{max-width:94px}
-  .portal-header-actions .language-switcher .goog-te-gadget .goog-te-combo{max-width:94px;font-size:11px}
+  .portal-header-actions .language-switcher{
+    min-width:0;
+    min-height:38px;
+    gap:6px;
+    padding:5px 7px;
+    border-radius:10px;
+  }
+  .portal-header-actions .language-switcher__icon{width:15px;height:15px}
+  .portal-header-actions .language-switcher__label{font-size:9px}
+  .portal-header-actions .language-switcher #google_translate_element{max-width:96px}
+  .portal-header-actions .language-switcher .goog-te-gadget .goog-te-combo{
+    width:96px;
+    font-size:11px!important;
+  }
 }
