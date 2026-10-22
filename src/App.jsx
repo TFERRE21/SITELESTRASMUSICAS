@@ -66,7 +66,7 @@ function LanguageSwitcher() {
       const combo = document.querySelector("#google_translate_element .goog-te-combo");
       if (!combo) return;
       const firstOption = combo.options?.[0];
-      if (firstOption && firstOption.value === "") firstOption.textContent = "Português";
+      if (firstOption && firstOption.value === "" && firstOption.textContent !== "Português") firstOption.textContent = "Português";
       combo.setAttribute("aria-label", "Selecionar idioma do site");
       combo.title = "Selecionar idioma";
     };
