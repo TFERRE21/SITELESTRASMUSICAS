@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { AudioLines, Square, Search, Music2, SkipForward, Heart, Menu, X, ArrowRight, ChevronRight, Play, Disc3, Mic2, Headphones, Sparkles, BookOpen, Crown, Printer, Download, Share2, Youtube, Home, UserRound, LifeBuoy, Send, LogOut, CircleUserRound, ListMusic, ShoppingBag, Guitar, Piano, Package, SlidersHorizontal, ExternalLink, BadgePercent, ArrowUpRight } from "lucide-react";
+import { AudioLines, Square, Search, Music2, SkipForward, Heart, Menu, X, ArrowRight, ChevronRight, Play, Disc3, Mic2, Headphones, Sparkles, BookOpen, Crown, Printer, Download, Share2, Youtube, Home, UserRound, LifeBuoy, Send, LogOut, CircleUserRound, ListMusic, ShoppingBag, Guitar, Piano, Package, SlidersHorizontal, ExternalLink, BadgePercent, ArrowUpRight, Languages } from "lucide-react";
 import { institutional } from "./config/institutional.js";
 
 const genres = ["Todos", "Gospel", "Sertanejo", "MPB", "Pop", "Rock", "Rap", "Funk", "Pagode", "Samba", "Forró", "Reggae", "Indie", "Jazz", "Música Latina"];
@@ -87,8 +87,8 @@ function LanguageSwitcher() {
   }, []);
 
   return <div className="language-switcher" aria-label="Trocar idioma">
-    <span aria-hidden="true">🌐</span>
-    <div id="google_translate_element"><span className="language-switcher__label">Idioma</span></div>
+    <Languages className="language-switcher__icon" size={17} strokeWidth={2.1} aria-hidden="true" />
+    <div className="language-switcher__content"><span className="language-switcher__label">Idioma</span><div id="google_translate_element"><span className="language-switcher__placeholder">Português</span></div></div>
   </div>;
 }
 
