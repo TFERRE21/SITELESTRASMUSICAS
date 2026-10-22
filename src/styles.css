@@ -1312,3 +1312,65 @@ body{background:#f7f8fc;color:var(--sl-ink)}
 .portal-chart-retry button{flex-shrink:0;min-height:34px;padding:0 12px;border:0;border-radius:8px;background:#ffdb00;color:#15172a;font-size:11px;font-weight:850;cursor:pointer}
 .portal-chart-retry button:disabled{opacity:.6;cursor:wait}
 @media(max-width:560px){.portal-chart-retry{align-items:flex-start;flex-direction:column}.portal-chart-retry button{width:100%}}
+
+/* FINAL HEADER OVERRIDE: prevent desktop navigation from sharing the logo row at narrow widths. */
+@media screen and (min-width:761px) and (max-width:1400px){
+  header.portal-header{
+    display:flex!important;
+    height:auto!important;
+    min-height:0!important;
+    flex-direction:row!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    justify-content:space-between!important;
+    gap:0 16px!important;
+    padding:10px 18px!important;
+  }
+  header.portal-header>.portal-brand{
+    display:inline-flex!important;
+    position:static!important;
+    flex:1 1 220px!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    min-width:220px!important;
+    max-width:100%!important;
+  }
+  header.portal-header>.portal-header-actions{
+    display:flex!important;
+    position:static!important;
+    flex:0 0 auto!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    margin-left:auto!important;
+  }
+  header.portal-header>nav.portal-nav,
+  header.portal-header>nav.portal-nav.portal-nav--open{
+    display:flex!important;
+    position:static!important;
+    order:3!important;
+    flex:0 0 100%!important;
+    width:100%!important;
+    height:auto!important;
+    min-width:0!important;
+    grid-column:auto!important;
+    grid-row:auto!important;
+    flex-direction:row!important;
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    justify-content:flex-start!important;
+    gap:0 18px!important;
+    margin:0!important;
+    padding:8px 0 2px!important;
+    border-top:1px solid rgba(255,255,255,.12)!important;
+    overflow:visible!important;
+    background:transparent!important;
+  }
+  header.portal-header>nav.portal-nav a,
+  header.portal-header>nav.portal-nav button{
+    display:inline-flex!important;
+    position:static!important;
+    padding:8px 0!important;
+    font-size:11px!important;
+    white-space:nowrap!important;
+  }
+}
