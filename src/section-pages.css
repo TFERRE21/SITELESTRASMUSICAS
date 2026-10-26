@@ -107,3 +107,12 @@
 @media(max-width:680px) { .artist-autocomplete { margin-top:-13px; } .artist-autocomplete__action { font-size:10px; } }
 .section-page-chart-source { margin: 12px 0 16px; color: #77758d; font-size: 12px; }
 .section-page-song-list>button>b { flex-shrink: 0; }
+
+.section-page-seo-copy{max-width:920px;margin:0 auto 28px;padding:22px 24px;border:1px solid #e8e4f1;border-radius:16px;background:#faf8ff;color:#4e4a64;line-height:1.75}
+.section-page-seo-copy h2{margin:0 0 10px;color:#211b3c;font-size:21px;line-height:1.3}
+.section-page-seo-copy h3{margin:18px 0 5px;color:#302651;font-size:15px}
+.section-page-seo-copy p{margin:8px 0;font-size:14px}
+.section-page-seo-links{display:flex;flex-wrap:wrap;gap:9px;margin-top:17px}
+.section-page-seo-links button{padding:9px 13px;border:1px solid #ded5f3;border-radius:9px;background:#fff;color:#6840b6;font:inherit;font-size:12px;font-weight:750;cursor:pointer}
+.section-page-seo-links button:hover{background:#f1eaff}
+@media(max-width:680px){.section-page-seo-copy{padding:17px;margin-bottom:22px;border-radius:12px}.section-page-seo-copy h2{font-size:19px}.section-page-seo-copy p{font-size:13px}.section-page-seo-links{gap:7px}.section-page-seo-links button{flex:1 1 auto}}
