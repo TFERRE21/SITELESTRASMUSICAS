@@ -1157,6 +1157,21 @@ const server = http.createServer(async (req, res) => {
       note: "Letras.mus.br é aberto como busca externa. Este endpoint não raspa nem copia letras; qualquer integração automatizada deve usar API ou autorização oficial da fonte."
     });
   }
+  if (req.method === "GET" && url.pathname === "/sitemap-musicas.xml") {
+    const xmlEscape = (value) => String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
+    const slugify = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "musica";
+    const songs = new Map();
+    for (const item of cachedCatalog) {
+      const title = String(item.title || "").trim();
+      const artist = String(item.artist || "").trim();
+      if (!title || !artist || title === "Faixa sem título" || artist === "Artista desconhecido") continue;
+      const slug = slugify(title) + "-por-" + slugify(artist);
+      songs.set(slug, { slug, updated: item.updatedAt || item.addedAt || null });
+    }
+    const entries = [...songs.values()].map(({ slug, updated }) => "  <url><loc>https://versosmusicais.com.br/musica/" + xmlEscape(slug) + "</loc>" + (updated ? "<lastmod>" + xmlEscape(new Date(updated).toISOString().slice(0, 10)) + "</lastmod>" : "") + "<changefreq>monthly</changefreq><priority>0.6</priority></url>").join("\n");
+    res.writeHead(200, { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=900", "X-Content-Type-Options": "nosniff" });
+    return res.end('<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' + entries + (entries ? "\n" : "") + "</urlset>");
+  }
   if (req.method === "GET" && url.pathname === "/api/catalog/status") {
     return json(res, 200, { robot: "Som & Letra", running: robotRunning, cachedItems: cachedCatalog.length, lastSearchAt, robotLastRunAt, robotLastError, nextAttemptAt: robotNextAllowedAt, consecutiveErrors: robotConsecutiveErrors, intervalSeconds: ROBOT_INTERVAL_MS / 1000, source: "LRCLIB" });
   }
