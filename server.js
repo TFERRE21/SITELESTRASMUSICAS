@@ -199,6 +199,41 @@ function normalizeTrack(track) {
   };
 }
 
+function normalizeAppleTrack(track) {
+  return {
+    id: `apple-${track.trackId}`,
+    title: track.trackName || "Faixa sem título",
+    artist: track.artistName || "Artista desconhecido",
+    album: track.collectionName || "",
+    genre: track.primaryGenreName || "",
+    releaseDate: track.releaseDate || "",
+    explicit: false,
+    provider: "Apple Search",
+    providerUrl: track.trackViewUrl || "",
+    artworkUrl: track.artworkUrl100 || "",
+    lyricsAvailable: false,
+    duration: Number.isFinite(track.trackTimeMillis) ? Math.round(track.trackTimeMillis / 1000) : null,
+    instrumental: false,
+    syncedLyricsAvailable: false,
+  };
+}
+
+async function appleSearchTracks(query) {
+  const endpoint = new URL("https://itunes.apple.com/search");
+  endpoint.searchParams.set("term", query);
+  endpoint.searchParams.set("entity", "song");
+  endpoint.searchParams.set("limit", "50");
+  const response = await fetch(endpoint, {
+    headers: { "User-Agent": USER_AGENT, "Accept": "application/json" },
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!response.ok) throw new Error(`Apple Search respondeu HTTP ${response.status}.`);
+  const payload = await response.json();
+  return Array.isArray(payload.results) ? payload.results.map(normalizeAppleTrack).filter((item) =>
+    item.title && item.artist && item.title !== "Faixa sem título" && item.artist !== "Artista desconhecido"
+  ) : [];
+}
+
 const mime = { ".html":"text/html; charset=utf-8", ".js":"text/javascript; charset=utf-8", ".css":"text/css; charset=utf-8", ".svg":"image/svg+xml", ".png":"image/png", ".jpg":"image/jpeg", ".webp":"image/webp", ".ico":"image/x-icon", ".json":"application/json; charset=utf-8", ".xml":"application/xml; charset=utf-8", ".txt":"text/plain; charset=utf-8" };
 
 async function serveStatic(req, res, pathname) {
@@ -1278,8 +1313,19 @@ async function robotCollectOneQuery() {
   robotRunning = true;
   const q = ROBOT_QUERIES[robotQueryIndex % ROBOT_QUERIES.length];
   try {
-    const results = await lrclib("/api/search", { q });
-    const items = Array.isArray(results) ? results.map(normalizeTrack) : [];
+    let items;
+    let source = "LRCLIB";
+    try {
+      const results = await lrclib("/api/search", { q });
+      items = Array.isArray(results) ? results.map(normalizeTrack) : [];
+    } catch (lrclibError) {
+      // LRCLIB may return 503 during an outage. Keep the catalog growing with
+      // track metadata from Apple's public Search API; lyrics remain LRCLIB-only.
+      if (lrclibError.status !== 503) throw lrclibError;
+      items = await appleSearchTracks(q);
+      source = "Apple Search (fallback de metadados)";
+      console.warn("[catalog-robot] LRCLIB indisponível (503); consulta '" + q + "' atendida via Apple Search, sem letras.");
+    }
     // Advance and persist the next query with the catalog to continue collecting across restarts.
     robotQueryIndex = (robotQueryIndex + 1) % ROBOT_QUERIES.length;
     await saveCatalog(items);
@@ -1287,7 +1333,7 @@ async function robotCollectOneQuery() {
     robotLastError = null;
     robotConsecutiveErrors = 0;
     robotNextAllowedAt = null;
-    console.info("[catalog-robot] consulta " + q + ": " + items.length + " resultados; total local " + cachedCatalog.length + ".");
+    console.info("[catalog-robot] consulta " + q + " via " + source + ": " + items.length + " resultados; total local " + cachedCatalog.length + ".");
   } catch (error) {
     robotLastRunAt = new Date().toISOString();
     robotLastError = error.message || "Falha na coleta automática.";
