@@ -2,3 +2,4 @@ User-agent: *
 Allow: /
 
 Sitemap: https://versosmusicais.com.br/sitemap.xml
+Sitemap: https://versosmusicais.com.br/sitemap-musicas.xml
