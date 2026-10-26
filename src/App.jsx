@@ -693,8 +693,8 @@ export default function App() {
   // Mantém título, descrição e canonical alinhados à rota real para evitar
   // que todas as páginas da aplicação sejam apresentadas como a página inicial.
   useEffect(() => {
-    const path = window.location.pathname.replace(/\\/+$/, "") || "/";
-    const genreMatch = path.match(/^\\/generos\\/([^/]+)/);
+    const path = window.location.pathname.replace(/\/+$/, "") || "/";
+    const genreMatch = path.match(/^\/generos\/([^/]+)/);
     const routeMeta = {
       "/": ["Versos Musicais — Letras de músicas, artistas e gêneros", "Encontre letras de músicas, descubra cantores, artistas e gêneros musicais no Versos Musicais."],
       "/letras": ["Letras de músicas — Versos Musicais", "Pesquise letras de músicas e encontre suas canções favoritas no Versos Musicais."],
