@@ -257,14 +257,14 @@ async function serveStatic(req, res, pathname) {
         const canonical = "https://versosmusicais.com.br/musica/" + slug;
         body = body
           .replace(/<title>[^<]*<\/title>/i, "<title>" + escapeHtml(title) + "</title>")
-          .replace(/<meta name="description" content="[^"]*">/i, '<meta name="description" content="' + escapeHtml(description) + '">')
-          .replace(/<link rel="canonical" href="[^"]*">/i, '<link rel="canonical" href="' + canonical + '">')
-          .replace(/<meta property="og:title" content="[^"]*">/i, '<meta property="og:title" content="' + escapeHtml(title) + '">')
-          .replace(/<meta property="og:description" content="[^"]*">/i, '<meta property="og:description" content="' + escapeHtml(description) + '">')
-          .replace(/<meta property="og:type" content="[^"]*">/i, '<meta property="og:type" content="music.song">')
-          .replace(/<meta property="og:url" content="[^"]*">/i, '<meta property="og:url" content="' + canonical + '">')
-          .replace(/<meta name="twitter:title" content="[^"]*">/i, '<meta name="twitter:title" content="' + escapeHtml(title) + '">')
-          .replace(/<meta name="twitter:description" content="[^"]*">/i, '<meta name="twitter:description" content="' + escapeHtml(description) + '">');
+          .replace(/<meta name="description" content="[^"]*"\s*\/?\s*>/i, '<meta name="description" content="' + escapeHtml(description) + '">')
+          .replace(/<link rel="canonical" href="[^"]*"\s*\/?\s*>/i, '<link rel="canonical" href="' + canonical + '">')
+          .replace(/<meta property="og:title" content="[^"]*"\s*\/?\s*>/i, '<meta property="og:title" content="' + escapeHtml(title) + '">')
+          .replace(/<meta property="og:description" content="[^"]*"\s*\/?\s*>/i, '<meta property="og:description" content="' + escapeHtml(description) + '">')
+          .replace(/<meta property="og:type" content="[^"]*"\s*\/?\s*>/i, '<meta property="og:type" content="music.song">')
+          .replace(/<meta property="og:url" content="[^"]*"\s*\/?\s*>/i, '<meta property="og:url" content="' + canonical + '">')
+          .replace(/<meta name="twitter:title" content="[^"]*"\s*\/?\s*>/i, '<meta name="twitter:title" content="' + escapeHtml(title) + '">')
+          .replace(/<meta name="twitter:description" content="[^"]*"\s*\/?\s*>/i, '<meta name="twitter:description" content="' + escapeHtml(description) + '">');
         const schema = JSON.stringify({
           "@context": "https://schema.org",
           "@type": "MusicRecording",
