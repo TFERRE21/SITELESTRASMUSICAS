@@ -274,7 +274,7 @@ async function serveStatic(req, res, pathname) {
           inLanguage: "pt-BR",
           mainEntityOfPage: canonical
         }).replace(/</g, "\\u003c");
-        body = body.replace("</head>", '<script type="application/ld+json">' + schema + "</script>\\n</head>");
+        body = body.replace("</head>", '<script type="application/ld+json">' + schema + "</script>\n</head>");
       }
     }
     res.writeHead(200, { "Content-Type": mime[path.extname(filePath)] || "text/html; charset=utf-8", "X-Content-Type-Options": "nosniff" });
