@@ -690,6 +690,43 @@ export default function App() {
   const [commentNotice, setCommentNotice] = useState("");
   const audioRef = useRef(null);
 
+  // Mantém título, descrição e canonical alinhados à rota real para evitar
+  // que todas as páginas da aplicação sejam apresentadas como a página inicial.
+  useEffect(() => {
+    const path = window.location.pathname.replace(/\\/+$/, "") || "/";
+    const genreMatch = path.match(/^\\/generos\\/([^/]+)/);
+    const routeMeta = {
+      "/": ["Versos Musicais — Letras de músicas, artistas e gêneros", "Encontre letras de músicas, descubra cantores, artistas e gêneros musicais no Versos Musicais."],
+      "/letras": ["Letras de músicas — Versos Musicais", "Pesquise letras de músicas e encontre suas canções favoritas no Versos Musicais."],
+      "/artistas": ["Artistas e cantores — Versos Musicais", "Explore artistas, cantores e suas músicas no Versos Musicais."],
+      "/albuns": ["Álbuns musicais — Versos Musicais", "Descubra álbuns e músicas de diferentes artistas no Versos Musicais."],
+      "/playlists": ["Playlists musicais — Versos Musicais", "Explore seleções e playlists musicais no Versos Musicais."],
+      "/em-alta": ["Músicas em alta — Brasil e mundo | Versos Musicais", "Confira músicas em alta no Brasil e no ranking global."],
+      "/generos": ["Gêneros musicais — Versos Musicais", "Explore gêneros musicais e encontre artistas de cada estilo."],
+      "/loja": ["Loja — Versos Musicais", "Produtos e acessórios para quem ama música."]
+    };
+    let meta = routeMeta[path] || routeMeta["/"];
+    if (genreMatch) {
+      const genreName = genreFromSlug(decodeURIComponent(genreMatch[1])) || decodeURIComponent(genreMatch[1]).replace(/-/g, " ");
+      meta = [genreName + " — artistas e músicas | Versos Musicais", "Explore artistas e músicas do gênero " + genreName + " no Versos Musicais."];
+    }
+    document.title = meta[0];
+    let description = document.querySelector('meta[name="description"]');
+    if (!description) {
+      description = document.createElement("meta");
+      description.name = "description";
+      document.head.appendChild(description);
+    }
+    description.content = meta[1];
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement("link");
+      canonical.rel = "canonical";
+      document.head.appendChild(canonical);
+    }
+    canonical.href = "https://versosmusicais.com.br" + path;
+  }, [sectionRoute, genreRoute, lyrics]);
+
   // Sincroniza o mini player com o relógio real do elemento de áudio.
   // Alguns catálogos demoram a disparar loadedmetadata/timeupdate de forma consistente.
   useEffect(() => {
