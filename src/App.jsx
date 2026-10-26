@@ -695,6 +695,7 @@ export default function App() {
   useEffect(() => {
     const path = window.location.pathname.replace(/\/+$/, "") || "/";
     const genreMatch = path.match(/^\/generos\/([^/]+)/);
+    const songMatch = path.match(/^\/musica\/([^/]+)/);
     const routeMeta = {
       "/": ["Versos Musicais — Letras de músicas, artistas e gêneros", "Encontre letras de músicas, descubra cantores, artistas e gêneros musicais no Versos Musicais."],
       "/letras": ["Letras de músicas — Versos Musicais", "Pesquise letras de músicas e encontre suas canções favoritas no Versos Musicais."],
@@ -709,6 +710,22 @@ export default function App() {
     if (genreMatch) {
       const genreName = genreFromSlug(decodeURIComponent(genreMatch[1])) || decodeURIComponent(genreMatch[1]).replace(/-/g, " ");
       meta = [genreName + " — artistas e músicas | Versos Musicais", "Explore artistas e músicas do gênero " + genreName + " no Versos Musicais."];
+    }
+    if (songMatch) {
+      const params = new URLSearchParams(window.location.search);
+      const songTitle = lyrics?.title || params.get("title") || decodeURIComponent(songMatch[1]).replace(/-/g, " ");
+      const songArtist = lyrics?.artist || params.get("artist") || "";
+      meta = [songTitle + (songArtist ? " — " + songArtist : "") + " | Versos Musicais", "Consulte informações e disponibilidade da letra de " + songTitle + (songArtist ? " de " + songArtist : "") + " no Versos Musicais."];
+      let schema = document.querySelector("script[data-versos-music-schema]");
+      if (!schema) {
+        schema = document.createElement("script");
+        schema.type = "application/ld+json";
+        schema.dataset.versosMusicSchema = "true";
+        document.head.appendChild(schema);
+      }
+      schema.textContent = JSON.stringify({"@context":"https://schema.org","@type":"MusicRecording",name:songTitle,byArtist:songArtist ? {"@type":"MusicGroup",name:songArtist} : undefined,url:"https://versosmusicais.com.br"+path});
+    } else {
+      document.querySelector("script[data-versos-music-schema]")?.remove();
     }
     document.title = meta[0];
     let description = document.querySelector('meta[name="description"]');
@@ -926,7 +943,7 @@ export default function App() {
         setLyricsLoading(false);
       }
     };
-    if (new URLSearchParams(window.location.search).has("title") && new URLSearchParams(window.location.search).has("artist")) openFromAddress();
+    if ((new URLSearchParams(window.location.search).has("title") && new URLSearchParams(window.location.search).has("artist")) || window.location.pathname.startsWith("/musica/")) openFromAddress();
     window.addEventListener("popstate", openFromAddress);
     return () => window.removeEventListener("popstate", openFromAddress);
   }, []);
@@ -954,7 +971,8 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
       for (const [key, value] of Object.entries(metadata)) {
         if (value) params.set(key, String(value));
       }
-      window.history.pushState({ song: true }, "", `?${params.toString()}`);
+      const slug = (item.title || "musica").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "musica";
+      window.history.pushState({ song: true }, "", "/musica/" + slug + "?" + params.toString());
     }
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
     setIsPreviewPlaying(false); setPreviewTime(0); setPreviewDuration(0);
