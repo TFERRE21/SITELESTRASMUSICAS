@@ -932,8 +932,16 @@ export default function App() {
       setSectionRoute(section && !routeGenre ? section : "");
       if (routeGenre || section && !new URLSearchParams(window.location.search).has("title")) { setLyrics(null); setVideo(null); setVideoError(""); setLyricsLoading(false); return; }
       const params = new URLSearchParams(window.location.search);
-      const title = params.get("title");
-      const artist = params.get("artist");
+      let title = params.get("title");
+      let artist = params.get("artist");
+      if ((!title || !artist) && pathParts[0] === "musica" && pathParts[1]) {
+        const slug = decodeURIComponent(pathParts[1]);
+        const separator = slug.lastIndexOf("-por-");
+        if (separator > 0) {
+          title = slug.slice(0, separator).replace(/-/g, " ");
+          artist = slug.slice(separator + 5).replace(/-/g, " ");
+        }
+      }
       if (title && artist) {
         openLyrics({ id: "itunes-direct", title, artist, artworkUrl: params.get("artwork") || "", album: params.get("album") || "", releaseDate: params.get("releaseDate") || "", genre: params.get("genre") || "" });
       } else {
@@ -971,7 +979,8 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
       for (const [key, value] of Object.entries(metadata)) {
         if (value) params.set(key, String(value));
       }
-      const slug = (item.title || "musica").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "musica";
+      const slugify = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "musica";
+      const slug = slugify(item.title) + "-por-" + slugify(item.artist);
       window.history.pushState({ song: true }, "", "/musica/" + slug + "?" + params.toString());
     }
     if (audioRef.current) { audioRef.current.pause(); audioRef.current.currentTime = 0; }
