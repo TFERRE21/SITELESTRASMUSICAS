@@ -244,8 +244,40 @@ async function serveStatic(req, res, pathname) {
   if (!filePath.startsWith(dist)) return json(res, 403, { error: "Acesso negado." });
   if (!existsSync(filePath)) filePath = path.join(dist, "index.html");
   try {
-    const body = await readFile(filePath);
-    res.writeHead(200, { "Content-Type": mime[path.extname(filePath)] || "application/octet-stream", "X-Content-Type-Options": "nosniff" });
+    let body = await readFile(filePath, "utf8");
+    // Deliver song-specific metadata in the initial HTML so crawlers can identify each song URL.
+    if (decoded.startsWith("/musica/") && path.basename(filePath) === "index.html") {
+      const slugifySeo = (value) => String(value || "").normalize("NFD").replace(/[\\u0300-\\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "musica";
+      const slug = decoded.slice("/musica/".length).replace(/\\/$/, "");
+      const item = cachedCatalog.find((song) => slugifySeo(song.title) + "-por-" + slugifySeo(song.artist) === slug);
+      if (item) {
+        const escapeHtml = (value) => String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+        const title = String(item.title || "Música") + " — " + String(item.artist || "Artista") + " | Versos Musicais";
+        const description = "Conheça " + String(item.title || "esta música") + ", de " + String(item.artist || "este artista") + ", no Versos Musicais. Consulte informações da faixa e verifique a disponibilidade da letra.";
+        const canonical = "https://versosmusicais.com.br/musica/" + slug;
+        body = body
+          .replace(/<title>[^<]*<\\/title>/i, "<title>" + escapeHtml(title) + "</title>")
+          .replace(/<meta name="description" content="[^"]*">/i, '<meta name="description" content="' + escapeHtml(description) + '">')
+          .replace(/<link rel="canonical" href="[^"]*">/i, '<link rel="canonical" href="' + canonical + '">')
+          .replace(/<meta property="og:title" content="[^"]*">/i, '<meta property="og:title" content="' + escapeHtml(title) + '">')
+          .replace(/<meta property="og:description" content="[^"]*">/i, '<meta property="og:description" content="' + escapeHtml(description) + '">')
+          .replace(/<meta property="og:type" content="[^"]*">/i, '<meta property="og:type" content="music.song">')
+          .replace(/<meta property="og:url" content="[^"]*">/i, '<meta property="og:url" content="' + canonical + '">')
+          .replace(/<meta name="twitter:title" content="[^"]*">/i, '<meta name="twitter:title" content="' + escapeHtml(title) + '">')
+          .replace(/<meta name="twitter:description" content="[^"]*">/i, '<meta name="twitter:description" content="' + escapeHtml(description) + '">');
+        const schema = JSON.stringify({
+          "@context": "https://schema.org",
+          "@type": "MusicRecording",
+          name: String(item.title || ""),
+          byArtist: { "@type": "MusicGroup", name: String(item.artist || "") },
+          url: canonical,
+          inLanguage: "pt-BR",
+          mainEntityOfPage: canonical
+        }).replace(/</g, "\\u003c");
+        body = body.replace("</head>", '<script type="application/ld+json">' + schema + "</script>\\n</head>");
+      }
+    }
+    res.writeHead(200, { "Content-Type": mime[path.extname(filePath)] || "text/html; charset=utf-8", "X-Content-Type-Options": "nosniff" });
     res.end(body);
   } catch { json(res, 503, { error: "A versão web não foi compilada. Execute npm run build." }); }
 }
