@@ -109,6 +109,10 @@ async function readCatalog() {
     const parsed = JSON.parse(await readFile(catalogFile, "utf8"));
     cachedCatalog = Array.isArray(parsed.items) ? parsed.items : [];
     lastSearchAt = parsed.lastSearchAt || null;
+    // Preserve query rotation across VPS restarts so the collector does not restart at "gospel" every time.
+    robotQueryIndex = Number.isInteger(parsed.robotQueryIndex) && parsed.robotQueryIndex >= 0
+      ? parsed.robotQueryIndex % ROBOT_QUERIES.length
+      : 0;
   } catch { cachedCatalog = []; }
 }
 
@@ -118,7 +122,7 @@ async function saveCatalog(items) {
   for (const item of items) merged.set(String(item.id), item);
   cachedCatalog = [...merged.values()].slice(-50000);
   lastSearchAt = new Date().toISOString();
-  await writeFile(catalogFile, JSON.stringify({ lastSearchAt, items: cachedCatalog }, null, 2), { mode: 0o600 });
+  await writeFile(catalogFile, JSON.stringify({ lastSearchAt, robotQueryIndex, items: cachedCatalog }, null, 2), { mode: 0o600 });
 }
 
 async function lrclib(pathname, params = {}) {
@@ -1276,12 +1280,13 @@ async function robotCollectOneQuery() {
   try {
     const results = await lrclib("/api/search", { q });
     const items = Array.isArray(results) ? results.map(normalizeTrack) : [];
+    // Advance and persist the next query with the catalog to continue collecting across restarts.
+    robotQueryIndex = (robotQueryIndex + 1) % ROBOT_QUERIES.length;
     await saveCatalog(items);
     robotLastRunAt = new Date().toISOString();
     robotLastError = null;
     robotConsecutiveErrors = 0;
     robotNextAllowedAt = null;
-    robotQueryIndex += 1;
     console.info("[catalog-robot] consulta " + q + ": " + items.length + " resultados; total local " + cachedCatalog.length + ".");
   } catch (error) {
     robotLastRunAt = new Date().toISOString();
