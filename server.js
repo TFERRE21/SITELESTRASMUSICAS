@@ -252,7 +252,7 @@ async function serveStatic(req, res, pathname) {
       const item = cachedCatalog.find((song) => slugifySeo(song.title) + "-por-" + slugifySeo(song.artist) === slug);
       if (item) {
         const escapeHtml = (value) => String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-        const title = String(item.title || "Música") + " — " + String(item.artist || "Artista") + " | Versos Musicais";
+        const title = "Versos Musicais | Letra de " + String(item.title || "Música") + " — " + String(item.artist || "Artista");
         const description = "Conheça " + String(item.title || "esta música") + ", de " + String(item.artist || "este artista") + ", no Versos Musicais. Consulte informações da faixa e verifique a disponibilidade da letra.";
         const canonical = "https://versosmusicais.com.br/musica/" + slug;
         body = body
