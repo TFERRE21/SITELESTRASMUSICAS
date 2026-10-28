@@ -926,8 +926,14 @@ export default function App() {
       setVideoLoading(false);
     }
   };
-  // A busca de vídeos é sob demanda. Consultar a YouTube Data API automaticamente
-  // em cada abertura de música esgota rapidamente a cota search.list.
+  // Carrega automaticamente o vídeo ao entrar na página da música; o servidor
+  // pesquisa a página pública do YouTube e usa cache, sem depender da Data API.
+  useEffect(() => {
+    if (!lyrics?.title || !lyrics?.artist) return;
+    setVideo(null);
+    setVideoError("");
+    loadMusicVideo(false);
+  }, [lyrics?.title, lyrics?.artist]);
 
   useEffect(() => { if (lyrics?.title && lyrics?.artist) loadSongComments(lyrics); return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, [lyrics?.title, lyrics?.artist]);
 
