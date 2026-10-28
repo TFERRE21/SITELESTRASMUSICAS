@@ -9,6 +9,7 @@ const root = path.dirname(fileURLToPath(import.meta.url));
 const dist = path.join(root, "dist");
 const dataDir = process.env.DATA_DIR || path.join(root, "data");
 const catalogFile = path.join(dataDir, "catalog.json");
+const musicVideosFile = path.join(dataDir, "music-videos.json");
 const usersFile = path.join(dataDir, "users.json");
 const sessionsFile = path.join(dataDir, "sessions.json");
 const ticketsFile = path.join(dataDir, "support-tickets.json");
@@ -18,6 +19,11 @@ const PORT = Number(process.env.PORT || 3000);
 const USER_AGENT = "SomELetra/0.2 (https://github.com/TFERRE21/SITELESTRASMUSICAS)";
 let cachedCatalog = [];
 const musicVideoCache = new Map();
+let videoRobotRunning = false;
+let videoRobotIndex = 0;
+let videoRobotLastRunAt = null;
+let videoRobotLastError = null;
+const VIDEO_ROBOT_INTERVAL_MS = 45_000;
 let lastSearchAt = null;
 let robotRunning = false;
 let robotLastRunAt = null;
@@ -1163,55 +1169,16 @@ const server = http.createServer(async (req, res) => {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 180);
     if (!q) return json(res, 400, { error: "Informe o nome da música e do artista." });
     const cacheKey = q.toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
-    const now = Date.now();
-    for (const [key, value] of musicVideoCache) if (value.expiresAt <= now) musicVideoCache.delete(key);
     const cached = musicVideoCache.get(cacheKey);
-    if (cached) return json(res, 200, { video: cached.video, source: "cache" });
-
-    // Search the public YouTube results page instead of the quota-limited Data API.
+    if (cached?.video?.videoId) return json(res, 200, { video: cached.video, source: "cache" });
     try {
-      const searchUrl = new URL("https://www.youtube.com/results");
-      searchUrl.searchParams.set("search_query", q);
-      const response = await fetch(searchUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
-          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
-        },
-        signal: AbortSignal.timeout(12000)
-      });
-      if (!response.ok) throw new Error("O YouTube não disponibilizou a página de pesquisa agora.");
-      const html = await response.text();
-      const initialMatch = html.match(/(?:var ytInitialData = |window\["ytInitialData"\] = )(\{[\s\S]*?\});<\/script>/);
-      if (!initialMatch) throw new Error("O YouTube bloqueou ou alterou a página de pesquisa.");
-      const initialData = JSON.parse(initialMatch[1]);
-      const renderers = [];
-      const visit = (value) => {
-        if (!value || typeof value !== "object") return;
-        if (value.videoRenderer?.videoId) renderers.push(value.videoRenderer);
-        for (const child of Object.values(value)) {
-          if (Array.isArray(child)) child.forEach(visit);
-          else if (child && typeof child === "object") visit(child);
-        }
-      };
-      visit(initialData);
-      const seen = new Set();
-      const videos = renderers.filter((item) => {
-        if (seen.has(item.videoId)) return false;
-        seen.add(item.videoId);
-        return true;
-      }).slice(0, 5).map((item) => ({
-        videoId: item.videoId,
-        title: (item.title?.runs || []).map((run) => run.text || "").join("") || item.title?.simpleText || "",
-        channel: (item.ownerText?.runs || item.shortBylineText?.runs || []).map((run) => run.text || "").join("") || "",
-        thumbnail: item.thumbnail?.thumbnails?.slice(-1)[0]?.url || ""
-      })).filter((item) => item.videoId && item.title);
-      if (!videos.length) throw new Error("Nenhum vídeo foi encontrado na pesquisa do YouTube.");
-      const video = videos[0];
-      musicVideoCache.set(cacheKey, { video, expiresAt: now + 24 * 60 * 60 * 1000 });
-      return json(res, 200, { video, alternatives: videos.slice(1), source: "YouTube search page" });
+      const video = await findYouTubeVideo(q);
+      if (!video) return json(res, 404, { error: "Nenhum vídeo encontrado. Tente novamente mais tarde." });
+      musicVideoCache.set(cacheKey, { video, savedAt: new Date().toISOString() });
+      await persistMusicVideos();
+      return json(res, 200, { video, source: "youtube-public-search" });
     } catch (error) {
-      return json(res, 502, { error: error.message || "Falha ao buscar vídeos no YouTube sem API." });
+      return json(res, 502, { error: error.message || "Falha ao buscar vídeos no YouTube." });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/charts") {
@@ -1390,6 +1357,92 @@ const server = http.createServer(async (req, res) => {
   return json(res, 404, { error: "Não encontrado." });
 });
 
+async function persistMusicVideos() {
+  await mkdir(dataDir, { recursive: true });
+  const entries = Object.fromEntries(musicVideoCache.entries());
+  await writeFile(musicVideosFile, JSON.stringify({ updatedAt: new Date().toISOString(), items: entries }, null, 2), { mode: 0o600 });
+}
+
+async function readMusicVideos() {
+  try {
+    const parsed = JSON.parse(await readFile(musicVideosFile, "utf8"));
+    for (const [key, value] of Object.entries(parsed.items || {})) {
+      if (value?.video?.videoId) musicVideoCache.set(key, value);
+    }
+  } catch {}
+}
+
+async function findYouTubeVideo(q) {
+  const searchUrl = new URL("https://www.youtube.com/results");
+  searchUrl.searchParams.set("search_query", q);
+  const response = await fetch(searchUrl, {
+    headers: {
+      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
+    },
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!response.ok) throw new Error("O YouTube não disponibilizou a página de pesquisa agora.");
+  const html = await response.text();
+  const initialMatch = html.match(/(?:var ytInitialData = |window\["ytInitialData"\] = )(\{[\s\S]*?\});<\/script>/);
+  if (!initialMatch) throw new Error("O YouTube bloqueou ou alterou a página de pesquisa.");
+  const initialData = JSON.parse(initialMatch[1]);
+  const renderers = [];
+  const visit = (value) => {
+    if (!value || typeof value !== "object") return;
+    if (value.videoRenderer?.videoId) renderers.push(value.videoRenderer);
+    for (const child of Object.values(value)) {
+      if (Array.isArray(child)) child.forEach(visit);
+      else if (child && typeof child === "object") visit(child);
+    }
+  };
+  visit(initialData);
+  const seen = new Set();
+  const videos = renderers.filter((item) => {
+    if (seen.has(item.videoId)) return false;
+    seen.add(item.videoId);
+    return true;
+  }).slice(0, 5).map((item) => ({
+    videoId: item.videoId,
+    title: (item.title?.runs || []).map((run) => run.text || "").join("") || item.title?.simpleText || "",
+    channel: (item.ownerText?.runs || item.shortBylineText?.runs || []).map((run) => run.text || "").join("") || "",
+    thumbnail: item.thumbnail?.thumbnails?.slice(-1)[0]?.url || "",
+    url: "https://www.youtube.com/watch?v=" + item.videoId
+  })).filter((item) => item.videoId && item.title);
+  return videos[0] || null;
+}
+
+async function robotCollectOneVideo() {
+  if (videoRobotRunning || !cachedCatalog.length) return;
+  videoRobotRunning = true;
+  try {
+    const pending = cachedCatalog.filter((item) => item.title && item.artist &&
+      !musicVideoCache.has((item.title + " " + item.artist).toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim()));
+    if (!pending.length) {
+      videoRobotLastRunAt = new Date().toISOString();
+      return;
+    }
+    const track = pending[videoRobotIndex % pending.length];
+    videoRobotIndex = (videoRobotIndex + 1) % Math.max(1, pending.length);
+    const q = track.title + " " + track.artist;
+    const key = q.toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
+    const video = await findYouTubeVideo(q);
+    if (video) {
+      musicVideoCache.set(key, { video, savedAt: new Date().toISOString() });
+      await persistMusicVideos();
+      console.info("[video-robot] vídeo salvo: " + q + " -> " + video.url);
+    }
+    videoRobotLastError = null;
+    videoRobotLastRunAt = new Date().toISOString();
+  } catch (error) {
+    videoRobotLastError = error.message || "Falha na busca automática de vídeos.";
+    console.warn("[video-robot] " + videoRobotLastError);
+  } finally {
+    videoRobotRunning = false;
+  }
+}
+
 async function robotCollectOneQuery() {
   if (robotRunning) return;
   if (robotNextAllowedAt && Date.now() < Date.parse(robotNextAllowedAt)) return;
@@ -1429,10 +1482,13 @@ async function robotCollectOneQuery() {
 }
 
 await readCatalog();
+await readMusicVideos();
 server.listen(PORT, "0.0.0.0", () => {
   console.info(`[server] Som & Letra ouvindo na porta ${PORT}; provedor LRCLIB sem chave de API.`);
   setTimeout(() => {
     robotCollectOneQuery().catch((error) => console.warn("[catalog-robot]", error));
     setInterval(() => robotCollectOneQuery().catch((error) => console.warn("[catalog-robot]", error)), ROBOT_INTERVAL_MS);
+    robotCollectOneVideo().catch((error) => console.warn("[video-robot]", error));
+    setInterval(() => robotCollectOneVideo().catch((error) => console.warn("[video-robot]", error)), VIDEO_ROBOT_INTERVAL_MS);
   }, 10_000);
 });
