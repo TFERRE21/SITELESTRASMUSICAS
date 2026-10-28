@@ -1167,36 +1167,51 @@ const server = http.createServer(async (req, res) => {
     for (const [key, value] of musicVideoCache) if (value.expiresAt <= now) musicVideoCache.delete(key);
     const cached = musicVideoCache.get(cacheKey);
     if (cached) return json(res, 200, { video: cached.video, source: "cache" });
-    const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) return json(res, 503, { error: "Busca automática indisponível. Use a pesquisa direta do YouTube." });
+
+    // Search the public YouTube results page instead of the quota-limited Data API.
     try {
-      const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
-      searchUrl.searchParams.set("part", "snippet");
-      searchUrl.searchParams.set("type", "video");
-      searchUrl.searchParams.set("videoEmbeddable", "true");
-      searchUrl.searchParams.set("videoSyndicated", "true");
-      searchUrl.searchParams.set("regionCode", "BR");
-      searchUrl.searchParams.set("relevanceLanguage", "pt");
-      searchUrl.searchParams.set("maxResults", "3");
-      searchUrl.searchParams.set("q", q);
-      searchUrl.searchParams.set("key", apiKey);
-      const response = await fetch(searchUrl, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
-      const payload = await response.json();
-      if (!response.ok) {
-        const reason = payload.error?.errors?.[0]?.reason || "";
-        if (reason === "quotaExceeded" || reason === "dailyLimitExceeded") return json(res, 429, { error: "A cota diária da busca do YouTube foi atingida. Abra a pesquisa direta para assistir." });
-        return json(res, response.status, { error: payload.error?.message || "Não foi possível pesquisar vídeos no YouTube." });
-      }
-      const videos = (payload.items || []).filter((item) => item.id?.videoId).map((item) => ({
-        videoId: item.id.videoId, title: item.snippet?.title || "", channel: item.snippet?.channelTitle || "",
-        thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || ""
-      }));
-      if (!videos.length) return json(res, 404, { error: "Nenhum vídeo incorporável foi encontrado." });
+      const searchUrl = new URL("https://www.youtube.com/results");
+      searchUrl.searchParams.set("search_query", q);
+      const response = await fetch(searchUrl, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+          "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+          "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8"
+        },
+        signal: AbortSignal.timeout(12000)
+      });
+      if (!response.ok) throw new Error("O YouTube não disponibilizou a página de pesquisa agora.");
+      const html = await response.text();
+      const initialMatch = html.match(/(?:var ytInitialData = |window\["ytInitialData"\] = )(\{[\s\S]*?\});<\/script>/);
+      if (!initialMatch) throw new Error("O YouTube bloqueou ou alterou a página de pesquisa.");
+      const initialData = JSON.parse(initialMatch[1]);
+      const renderers = [];
+      const visit = (value) => {
+        if (!value || typeof value !== "object") return;
+        if (value.videoRenderer?.videoId) renderers.push(value.videoRenderer);
+        for (const child of Object.values(value)) {
+          if (Array.isArray(child)) child.forEach(visit);
+          else if (child && typeof child === "object") visit(child);
+        }
+      };
+      visit(initialData);
+      const seen = new Set();
+      const videos = renderers.filter((item) => {
+        if (seen.has(item.videoId)) return false;
+        seen.add(item.videoId);
+        return true;
+      }).slice(0, 5).map((item) => ({
+        videoId: item.videoId,
+        title: (item.title?.runs || []).map((run) => run.text || "").join("") || item.title?.simpleText || "",
+        channel: (item.ownerText?.runs || item.shortBylineText?.runs || []).map((run) => run.text || "").join("") || "",
+        thumbnail: item.thumbnail?.thumbnails?.slice(-1)[0]?.url || ""
+      })).filter((item) => item.videoId && item.title);
+      if (!videos.length) throw new Error("Nenhum vídeo foi encontrado na pesquisa do YouTube.");
       const video = videos[0];
       musicVideoCache.set(cacheKey, { video, expiresAt: now + 24 * 60 * 60 * 1000 });
-      return json(res, 200, { video, alternatives: videos.slice(1), source: "YouTube Data API" });
+      return json(res, 200, { video, alternatives: videos.slice(1), source: "YouTube search page" });
     } catch (error) {
-      return json(res, 502, { error: error.message || "Falha ao localizar vídeo." });
+      return json(res, 502, { error: error.message || "Falha ao buscar vídeos no YouTube sem API." });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/charts") {
