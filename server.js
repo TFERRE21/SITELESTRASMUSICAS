@@ -51,7 +51,34 @@ const ROBOT_QUERIES = [
   "Imagine Dragons", "Eminem", "Kendrick Lamar", "Kanye West", "SZA", "Ariana Grande", "Justin Bieber",
   "Madonna", "Whitney Houston", "Mariah Carey", "ABBA", "Bob Marley", "Metallica", "Nirvana", "Linkin Park",
   "Pink Floyd", "The Rolling Stones", "David Bowie", "Frank Sinatra", "Lana Del Rey", "Olivia Rodrigo",
-  "Sabrina Carpenter", "Chappell Roan", "Post Malone", "Shakira", "Bad Bunny", "BTS", "BLACKPINK"
+  "Sabrina Carpenter", "Chappell Roan", "Post Malone", "Shakira", "Bad Bunny", "BTS", "BLACKPINK",
+  // Buscas diretas por títulos de músicas para ampliar o catálogo além das consultas por artista/gênero.
+  "Evidências Chitãozinho Xororó", "Boate Azul", "Ainda Ontem Chorei de Saudade", "Telefone Mudo",
+  "Leão Marília Mendonça", "Infiel Marília Mendonça", "Todo Mundo Menos Você", "Erro Gostoso",
+  "Nosso Quadro", "Pipoco Ana Castela", "Canudinho Gusttavo Lima", "Desejo Imortal",
+  "Acorda Pedrinho", "Zona de Perigo", "Tá OK Dennis Kevin O Chris", "Vai Malandra Anitta",
+  "Envolver Anitta", "Cheia de Manias Raça Negra", "Temporal Art Popular", "Depois do Prazer Só Pra Contrariar",
+  "Deixa Acontecer Grupo Revelação", "Tá Escrito Grupo Revelação", "O Sol Jota Quest",
+  "Dias Melhores Jota Quest", "Anna Júlia Los Hermanos", "Tempo Perdido Legião Urbana",
+  "Pais e Filhos Legião Urbana", "Pro Dia Nascer Feliz Barão Vermelho", "Primeiros Erros Capital Inicial",
+  "Evidências", "Como é Grande o Meu Amor por Você", "Detalhes Roberto Carlos", "Oceano Djavan",
+  "Flor de Lis Djavan", "Velha Infância Tribalistas", "Ainda Bem Marisa Monte",
+  "Amei Te Ver Tiago Iorc", "Trevo Anavitória", "Meu Abrigo Melim", "Amarelo Emicida",
+  "Levanta e Anda Emicida", "AmarElo", "Dona de Mim IZA", "Pesadão IZA",
+  "Ai Preto L7NNON", "Malvadão 3 Xamã", "Amor de Fim de Noite Orochi",
+  "Deus de Promessas Davi Sacer", "Raridade Anderson Freire", "A Casa É Sua Casa Worship",
+  "Ninguém Explica Deus Preto no Branco", "Ousado Amor Isaias Saad", "Lugar Secreto Gabriela Rocha",
+  "Todavia Me Alegrarei Samuel Messias", "Jó Midian Lima", "Faz um Milagre em Mim Regis Danese",
+  "Because of You Kelly Clarkson", "Shape of You Ed Sheeran", "Blinding Lights The Weeknd",
+  "Flowers Miley Cyrus", "Anti-Hero Taylor Swift", "Cruel Summer Taylor Swift",
+  "Someone Like You Adele", "Rolling in the Deep Adele", "Perfect Ed Sheeran",
+  "Bohemian Rhapsody Queen", "Billie Jean Michael Jackson", "Smells Like Teen Spirit Nirvana",
+  "Numb Linkin Park", "Wonderwall Oasis", "Hotel California Eagles",
+  "Imagine John Lennon", "Like a Prayer Madonna", "Dancing Queen ABBA",
+  "Hallelujah Leonard Cohen", "Take On Me a-ha", "Livin on a Prayer Bon Jovi",
+  "Sweet Child O Mine Guns N Roses", "Enter Sandman Metallica", "Lose Yourself Eminem",
+  "Bad Romance Lady Gaga", "Levitating Dua Lipa", "As It Was Harry Styles",
+  "Despacito Luis Fonsi", "Bailando Enrique Iglesias", "Dynamite BTS", "How You Like That BLACKPINK"
 ];
 
 const json = (res, status, body) => {
