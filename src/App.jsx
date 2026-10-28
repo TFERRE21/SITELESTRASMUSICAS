@@ -604,7 +604,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           </section>
           <section className="reference-video-column">
             <div className="reference-video-card"><h2>Vídeo relacionado</h2>
-              {video ? <><div className="reference-video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId)}?rel=0${autoplayVideo ? "&autoplay=1" : ""}`} title={`${lyrics.title} — vídeo relacionado`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/></div><div className="reference-video-details"><strong>{video.title}</strong><span>{video.channel || lyrics.artist}</span><a href={youtubeUrl} target="_blank" rel="noreferrer">Assistir no YouTube <ArrowRight size={14}/></a></div></>
+              {video ? video.videoId ? <><div className="reference-video-frame"><iframe src={`https://www.youtube-nocookie.com/embed/${encodeURIComponent(video.videoId)}?rel=0${autoplayVideo ? "&autoplay=1" : ""}`} title={`${lyrics.title} — vídeo relacionado`} allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerPolicy="strict-origin-when-cross-origin" allowFullScreen/></div><div className="reference-video-details"><strong>{video.title}</strong><span>{video.channel || lyrics.artist}</span><a href={youtubeUrl} target="_blank" rel="noreferrer">Assistir no YouTube <ArrowRight size={14}/></a></div></> : <div className="reference-video-empty"><Youtube size={40}/><strong>Busca automática indisponível</strong><p>{videoError || "Abra a pesquisa no YouTube para localizar o clipe desta música."}</p><a className="reference-yellow" href={video.fallbackUrl} target="_blank" rel="noreferrer"><Play size={15} fill="currentColor"/> Pesquisar no YouTube</a></div> : <div className="reference-video-empty"><Youtube size={40}/><strong>{videoLoading ? "Localizando vídeo..." : "Vídeo oficial ou relacionado"}</strong><p>{videoError || "Carregue o vídeo quando quiser assistir."}</p><button className="reference-yellow" onClick={onVideo} disabled={videoLoading}><Play size={15} fill="currentColor"/> {videoLoading ? "Buscando..." : "Carregar vídeo"}</button></div>}
               : <div className="reference-video-empty"><Youtube size={40}/><strong>{videoLoading ? "Localizando vídeo..." : "Vídeo oficial ou relacionado"}</strong><p>{videoError || "Busque um vídeo correspondente a esta música."}</p><button className="reference-yellow" onClick={onVideo} disabled={videoLoading}><Play size={15} fill="currentColor"/> {videoLoading ? "Buscando..." : "Carregar vídeo"}</button></div>}
             </div>
             {video && <div className="reference-video-channel"><div className="reference-video-channel__icon"><Youtube size={25}/></div><div><strong>{video.channel || lyrics.artist}</strong><span>{video.title}</span></div><a href={youtubeUrl} target="_blank" rel="noreferrer">Assistir no YouTube <ArrowRight size={14}/></a></div>}
@@ -859,6 +859,10 @@ export default function App() {
       document.querySelector(".reference-video-card")?.scrollIntoView({ behavior: "smooth", block: "center" });
       return;
     }
+    if (video?.fallbackUrl) {
+      window.open(video.fallbackUrl, "_blank", "noopener,noreferrer");
+      return;
+    }
     if (!videoLoading) {
       await loadMusicVideo(true);
       window.setTimeout(() => document.querySelector(".reference-video-card")?.scrollIntoView({ behavior: "smooth", block: "center" }), 250);
@@ -904,20 +908,27 @@ export default function App() {
     setVideoLoading(true);
     setVideoError("");
     try {
-      const q = `${lyrics.title} ${lyrics.artist} official music video`;
+      const q = `${lyrics.title} ${lyrics.artist}`;
       const response = await fetch(`/api/music-video?q=${encodeURIComponent(q)}`);
       const data = await response.json();
       if (!response.ok || !data.video?.videoId) throw new Error(data.error || "Vídeo relacionado não encontrado.");
       setVideo(data.video);
     } catch (error) {
-      setVideoError(error.message || "Não foi possível carregar o vídeo.");
+      // Se a cota do YouTube acabar, ainda oferecemos a pesquisa direta,
+      // sem deixar um iframe vazio ou quebrado na página da música.
+      setVideoError(error.message || "Busca automática temporariamente indisponível.");
+      setVideo({
+        videoId: "",
+        title: `Pesquisar ${lyrics.title} — ${lyrics.artist} no YouTube`,
+        channel: "YouTube",
+        fallbackUrl: "https://www.youtube.com/results?search_query=" + encodeURIComponent(`${lyrics.title} ${lyrics.artist}`)
+      });
     } finally {
       setVideoLoading(false);
     }
   };
-  useEffect(() => {
-    if (lyrics?.title && lyrics.text !== "Carregando letra...") loadMusicVideo();
-  }, [lyrics?.title, lyrics?.artist, lyrics?.text]);
+  // A busca de vídeos é sob demanda. Consultar a YouTube Data API automaticamente
+  // em cada abertura de música esgota rapidamente a cota search.list.
 
   useEffect(() => { if (lyrics?.title && lyrics?.artist) loadSongComments(lyrics); return () => { if (audioRef.current) { audioRef.current.pause(); audioRef.current = null; } }; }, [lyrics?.title, lyrics?.artist]);
 
