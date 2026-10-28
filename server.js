@@ -17,6 +17,7 @@ const chordsFile = path.join(dataDir, "song-chords.json");
 const PORT = Number(process.env.PORT || 3000);
 const USER_AGENT = "SomELetra/0.2 (https://github.com/TFERRE21/SITELESTRASMUSICAS)";
 let cachedCatalog = [];
+const musicVideoCache = new Map();
 let lastSearchAt = null;
 let robotRunning = false;
 let robotLastRunAt = null;
@@ -1155,39 +1156,56 @@ const server = http.createServer(async (req, res) => {
       const match = payload.results?.[0];
       return json(res, 200, { artworkUrl: match?.artworkUrl100?.replace("100x100bb", "300x300bb") || "", title: match?.trackName || "", artist: match?.artistName || "", source: "iTunes Search API" });
     } catch (error) {
-      return json(res, 502, { error: error.message || "Não foi possível buscar a capa." , artworkUrl: "" });
-    }
-  }
-  if (req.method === "GET" && url.pathname === "/api/music-video") {
+      return json(res, 502, { error: error.message || "Não foi possível buscar a cap  if (req.method === "GET" && url.pathname === "/api/music-video") {
     const q = (url.searchParams.get("q") || "").trim().slice(0, 180);
     if (!q) return json(res, 400, { error: "Informe o nome da música e do artista." });
+
+    // Short in-memory cache avoids paying YouTube search.list quota for repeated requests.
+    const cacheKey = q.toLocaleLowerCase("pt-BR").replace(/\s+/g, " ").trim();
+    const now = Date.now();
+    for (const [key, value] of musicVideoCache) {
+      if (value.expiresAt <= now) musicVideoCache.delete(key);
+    }
+    const cached = musicVideoCache.get(cacheKey);
+    if (cached) return json(res, 200, { video: cached.video, source: "cache" });
+
     const apiKey = process.env.YOUTUBE_API_KEY;
-    if (!apiKey) return json(res, 503, { error: "O player de vídeos ainda precisa da chave oficial da YouTube Data API (YOUTUBE_API_KEY)." });
+    if (!apiKey) return json(res, 503, { error: "Busca automática indisponível: configure YOUTUBE_API_KEY. Use a pesquisa direta do YouTube." });
     try {
       const searchUrl = new URL("https://www.googleapis.com/youtube/v3/search");
       searchUrl.searchParams.set("part", "snippet");
       searchUrl.searchParams.set("type", "video");
-      // Prefer videos that YouTube marks as embeddable, to avoid restricted players in the site.
       searchUrl.searchParams.set("videoEmbeddable", "true");
       searchUrl.searchParams.set("videoSyndicated", "true");
       searchUrl.searchParams.set("regionCode", "BR");
       searchUrl.searchParams.set("relevanceLanguage", "pt");
-      searchUrl.searchParams.set("maxResults", "10");
+      searchUrl.searchParams.set("maxResults", "3");
       searchUrl.searchParams.set("q", q);
       searchUrl.searchParams.set("key", apiKey);
       const response = await fetch(searchUrl, { headers: { "Accept": "application/json" }, signal: AbortSignal.timeout(10000) });
       const payload = await response.json();
-      if (!response.ok) throw new Error(payload.error?.message || "Não foi possível pesquisar vídeos no YouTube.");
+      if (!response.ok) {
+        const reason = payload.error?.errors?.[0]?.reason || "";
+        if (reason === "quotaExceeded" || reason === "dailyLimitExceeded") {
+          return json(res, 429, { error: "A cota diária da busca do YouTube foi atingida. Abra a pesquisa direta para assistir." });
+        }
+        return json(res, response.status, { error: payload.error?.message || "Não foi possível pesquisar vídeos no YouTube." });
+      }
       const videos = (payload.items || []).filter((item) => item.id?.videoId).map((item) => ({
         videoId: item.id.videoId,
         title: item.snippet?.title || "",
         channel: item.snippet?.channelTitle || "",
         thumbnail: item.snippet?.thumbnails?.medium?.url || item.snippet?.thumbnails?.default?.url || ""
       }));
-      if (!videos.length) return json(res, 404, { error: "Nenhum vídeo relacionado foi encontrado." });
-      return json(res, 200, { video: videos[0], alternatives: videos.slice(1), source: "YouTube Data API" });
+      if (!videos.length) return json(res, 404, { error: "Nenhum vídeo incorporável foi encontrado. Abra a pesquisa direta do YouTube." });
+      const video = videos[0];
+      musicVideoCache.set(cacheKey, { video, expiresAt: now + 24 * 60 * 60 * 1000 });
+      return json(res, 200, { video, alternatives: videos.slice(1), source: "YouTube Data API" });
     } catch (error) {
       return json(res, 502, { error: error.message || "Falha ao localizar vídeo." });
+    }
+  }
+ao localizar vídeo." });
     }
   }
   if (req.method === "GET" && url.pathname === "/api/charts") {
