@@ -588,18 +588,7 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
                 </article>)}</div>}
                 <a className="reference-chords-external-search" href={songsterrSearchUrl} target="_blank" rel="noreferrer">Buscar “{lyrics.title}” no Songsterr <ArrowRight size={14}/></a>
               </section>
-              <div className="reference-chords-editor">
-                <small className="reference-chords-ai-note">Para respeitar os direitos autorais, a consulta e a visualização de cifras completas acontecem somente nas plataformas externas. Use os links acima para continuar.</small>
-                <label htmlFor="chord-input">Se já tiver os acordes, cole aqui</label>
-                <textarea id="chord-input" value={chordInput} onChange={(event) => { setChordInput(event.target.value); setTransposeBy(0); }} placeholder={"Ex.: Am  F  C  G\nCole apenas a sequência de acordes."} rows={4}/>
-                <div className="reference-chords-tools">
-                  <div className="reference-transpose-controls"><span>Transpor tom</span><button type="button" onClick={() => setTransposeBy((v) => Math.max(-11, v - 1))} aria-label="Baixar um semitom">−</button><strong>{transposeBy === 0 ? "Original" : transposeBy > 0 ? "+" + transposeBy + " semitom(ns)" : transposeBy + " semitom(ns)"}</strong><button type="button" onClick={() => setTransposeBy((v) => Math.min(11, v + 1))} aria-label="Subir um semitom">+</button><button type="button" onClick={() => setTransposeBy(0)}>Reset</button></div>
-                  <label className="reference-capo-control">Capotraste <select value={capo} onChange={(event) => setCapo(Number(event.target.value))}>{Array.from({length:13},(_,i)=><option key={i} value={i}>{i === 0 ? "Sem capotraste" : "Casa " + i}</option>)}</select></label>
-                </div>
-                {chordInput.trim() ? <div className="reference-transposed-output"><strong>{instrument === "Bateria" ? "Guia rítmico de bateria" : instrument === "Baixo" ? "Linha de baixo / notas-guia" : `Cifra para ${instrument}`}</strong><pre>{transposedChords}</pre><button type="button" onClick={() => navigator.clipboard?.writeText(transposedChords)}>Copiar {instrument === "Bateria" ? "guia" : "cifra"}</button></div> : <div className="reference-chords-note"><Music2 size={22}/><div><strong>{`Cifra ainda não cadastrada para ${instrument}`}</strong><p>O catálogo interno não encontrou conteúdo específico para este instrumento. Selecione outro instrumento ou cadastre uma referência adequada antes de publicar.</p></div></div>}
-                <div className="reference-chords-publish"><button type="button" onClick={publishChordToCatalog} disabled={savingChord || !chordInput.trim()}>{savingChord ? "Publicando..." : "Salvar cifra no Som & Letra"}</button><small>Ao publicar, a cifra fica disponível no catálogo interno desta música e instrumento.</small></div>
-                <div className="reference-instrument-tip"><strong>{instrument}:</strong> {instrument === "Bateria" ? "procure a levada, o andamento (BPM) e o padrão de viradas da música." : instrument === "Teclado" || instrument === "Piano" ? "procure os acordes com inversões, notas da mão direita e baixo da mão esquerda." : instrument === "Baixo" ? "procure as notas fundamentais, linhas de baixo e marcação rítmica." : "use o controle de transposição para adaptar os acordes ao seu tom confortável."}</div>
-              </div>
+              <div className="reference-chords-editor"><p className="reference-rights-note">O Versos Musicais não hospeda, reproduz, edita ou recebe cifras completas. Escolha uma plataforma externa na lista acima para consultar o conteúdo diretamente com seu responsável.</p></div>
             </div>}
           </section>
           <section className="reference-video-column">
