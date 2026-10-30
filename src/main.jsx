@@ -5,6 +5,7 @@ import "./styles.css";
 import "./genre-overrides.css";
 import "./genre-directory.css";
 import "./section-pages.css";
+import "./experience-overrides.css";
 
 createRoot(document.getElementById("root")).render(
   <React.StrictMode>
