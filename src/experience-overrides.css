@@ -77,3 +77,33 @@
 @media(max-width:1100px){.portal-header{padding:12px 20px}.portal-nav{gap:10px}.portal-nav a,.portal-nav button{font-size:11px}.portal-home-grid{grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);}.portal-home-right{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr}.portal-discovery-hub__moods{grid-template-columns:repeat(3,minmax(0,1fr))}}
 @media(max-width:760px){.portal-header{min-height:70px;padding:10px 15px}.portal-brand__logo{width:175px}.portal-hero--campaign{min-height:430px;grid-template-columns:1fr;padding:38px 18px 30px}.portal-hero--campaign:after{background:linear-gradient(90deg,rgba(5,11,31,.96),rgba(5,11,31,.72))!important}.portal-hero--campaign h1{font-size:clamp(39px,10vw,54px)}.portal-home-grid{grid-template-columns:1fr;padding:14px;gap:14px}.portal-home-right{grid-column:auto;display:flex}.portal-home-center .portal-ranking-panel{padding:15px}.portal-home-center .portal-ranking-columns{grid-template-columns:1fr}.portal-discovery-hub{padding:20px 14px}.portal-discovery-hub__heading{align-items:flex-start;flex-direction:column}.portal-discovery-hub__moods{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.portal-mood-card{min-height:132px;padding:13px}.portal-discovery-hub__bottom{grid-template-columns:1fr}.portal-genres--reference{padding:20px 14px 28px!important}.portal-genres--reference .portal-genre-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}.portal-genres--reference .portal-genre{min-height:86px}.portal-footer.reference-footer{padding:0}.portal-header .portal-nav{background:#0b1230}.portal-header .portal-nav a,.portal-header .portal-nav button{color:#fff}}
 @media(prefers-reduced-motion:reduce){.portal-mood-card,.portal-genres--reference .portal-genre{transition:none}}
+
+/* Identidade consistente nas páginas internas: artistas, gêneros, álbuns e playlists */
+.site-section-page .genre-directory-hero,.genre-directory:not(.site-section-page) .genre-directory-hero{background:radial-gradient(ellipse at 78% 12%,rgba(196,151,35,.22),transparent 38%),linear-gradient(135deg,#080f2a 0%,#101b3e 62%,#17234a 100%);color:#fff}
+.site-section-page .genre-directory-kicker,.genre-directory:not(.site-section-page) .genre-directory-kicker{color:#f3d04d}
+.site-section-page .section-page-brand{color:#f4d34b}
+.site-section-page .section-page-brand em{color:#fff}
+.site-section-page .section-page-nav button:hover,.site-section-page .section-page-nav button.active{color:#f5d34b;background:rgba(255,255,255,.1)}
+.site-section-page .section-page-actions button:first-child{background:#f3d04b;border-color:#f3d04b;color:#10172e}
+.site-section-page .section-page-search button{background:#f3d04b;color:#10172e}
+.site-section-page .section-page-content{max-width:1500px}
+.site-section-page .section-page-heading h2{color:#111a32}
+.site-section-page .section-page-genre-grid button,.site-section-page .section-page-card,.site-section-page .section-page-playlist,.site-section-page .section-page-song-list>button,.site-section-page .section-page-shortcuts button{border-color:#e3e7ef;box-shadow:0 8px 24px rgba(12,24,55,.045);transition:transform .18s,border-color .18s,box-shadow .18s}
+.site-section-page .section-page-genre-grid button:hover,.site-section-page .section-page-card:hover,.site-section-page .section-page-playlist:hover,.site-section-page .section-page-song-list>button:hover,.site-section-page .section-page-shortcuts button:hover{transform:translateY(-3px);border-color:#dfbd43;box-shadow:0 13px 28px rgba(12,24,55,.09)}
+.site-section-page .section-page-genre-grid button>span,.site-section-page .section-page-playlist-icon{background:#101a3b;color:#f5d34b}
+.site-section-page .section-page-card span,.site-section-page .section-page-load-more button,.site-section-page .section-page-catalog-filter button{background:#101a3b;color:#f5d34b}
+.site-section-page .section-page-playlist em,.site-section-page .section-page-genre-grid button small{color:#99720b}
+.site-section-page .section-page-footer{background:#080f2a;color:#d1d8e9;border-color:rgba(255,255,255,.12)}
+.site-section-page .section-page-footer button{background:#f3d04b;color:#10172e}
+.genre-directory:not(.site-section-page) .genre-directory-hero h1 em{color:#f4d34b}
+.genre-directory:not(.site-section-page) .genre-directory-clear{background:#f3d04b;color:#10172e;border-color:#f3d04b}
+.genre-directory:not(.site-section-page) .genre-directory-card__body button{background:#101a3b;color:#f5d34b}
+.genre-directory:not(.site-section-page) .genre-directory-card__body button:hover{background:#1b2b59}
+.genre-directory:not(.site-section-page) .genre-directory-footer{background:#080f2a;color:#d1d8e9;border-color:rgba(255,255,255,.12)}
+.genre-directory:not(.site-section-page) .genre-directory-footer button{color:#f3d04b}
+.reference-song-page{--song-accent:#a47b0d}
+.reference-song-page .reference-breadcrumb a{color:#8b690d}
+.reference-song-page .reference-inline-player{border-color:#eadca9;background:linear-gradient(135deg,#fffdf5,#f7f2df)}
+.reference-song-page .reference-inline-player__disc{background:#111a39;color:#f4d34b}
+.reference-song-page .reference-inline-player__timeline input{accent-color:#b58b18}
+@media(max-width:760px){.site-section-page .section-page-header{background:transparent}.site-section-page .section-page-nav{scrollbar-width:thin}.site-section-page .section-page-actions button:first-child{color:#10172e}.genre-directory:not(.site-section-page) .genre-directory-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
