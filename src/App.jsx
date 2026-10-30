@@ -563,16 +563,16 @@ function MusicPage({ lyrics, loading, video, videoLoading, videoError, onBack, o
           <Cover item={{...lyrics, artworkUrl:lyrics.artworkUrl}} index={0} className="reference-song-cover"/>
           <div className="reference-song-meta"><h1>{lyrics.title}</h1><p className="reference-song-artist">{lyrics.artist}</p>
             <p className="reference-song-album">{lyrics.album ? `Álbum: ${lyrics.album}` : "Detalhes do lançamento conforme disponíveis no catálogo"}{lyrics.releaseDate ? ` · Ano: ${String(lyrics.releaseDate).slice(0,4)}` : ""}{lyrics.genre ? ` · Gênero: ${lyrics.genre}` : ""}</p>
-            <div className="reference-song-actions"><button className="reference-yellow" onClick={onListen}>{isPreviewPlaying ? <><Square size={15} fill="currentColor"/> Parar música</> : <><Play size={16} fill="currentColor"/> Ouvir música</>}</button><button onClick={onNextTrack} disabled={nextTrackLoading} title="Carregar outra música deste artista"><SkipForward size={16}/>{nextTrackLoading ? "Buscando..." : "Próxima do artista"}</button><button onClick={onPrint}><Printer size={16}/> Imprimir</button><button onClick={onDownload} disabled={!hasLyrics}><Download size={16}/> Baixar (PDF)</button><button onClick={onShare}><Share2 size={16}/> Compartilhar</button><span className="reference-font-controls"><button onClick={()=>setFontScale(Math.max(.8,fontScale-.1))} aria-label="Diminuir fonte">A-</button><button onClick={()=>setFontScale(Math.min(1.4,fontScale+.1))} aria-label="Aumentar fonte">A+</button></span><button className={saved ? "reference-save is-saved" : "reference-save"} onClick={onSave}><Heart size={17} fill={saved ? "currentColor" : "none"}/> Favoritar</button></div>
+            <div className="reference-song-actions"><button className="reference-yellow" onClick={onListen}>{isPreviewPlaying ? <><Square size={15} fill="currentColor"/> Parar música</> : <><Play size={16} fill="currentColor"/> Ouvir música</>}</button><button onClick={onNextTrack} disabled={nextTrackLoading} title="Carregar outra música deste artista"><SkipForward size={16}/>{nextTrackLoading ? "Buscando..." : "Próxima do artista"}</button><button onClick={onShare}><Share2 size={16}/> Compartilhar</button><span className="reference-font-controls"><button onClick={()=>setFontScale(Math.max(.8,fontScale-.1))} aria-label="Diminuir fonte">A-</button><button onClick={()=>setFontScale(Math.min(1.4,fontScale+.1))} aria-label="Aumentar fonte">A+</button></span><button className={saved ? "reference-save is-saved" : "reference-save"} onClick={onSave}><Heart size={17} fill={saved ? "currentColor" : "none"}/> Favoritar</button></div>
           </div>
         </section>
         <div className="reference-song-grid">
           <section className="reference-lyrics-card reference-song-workspace">
             <div className="reference-song-tabs" role="tablist" aria-label="Conteúdo da música">
-              <button type="button" role="tab" aria-selected={songView === "lyrics"} className={songView === "lyrics" ? "is-active" : ""} onClick={() => setSongView("lyrics")}><BookOpen size={16}/> Letra</button>
+              <button type="button" role="tab" aria-selected={songView === "lyrics"} className={songView === "lyrics" ? "is-active" : ""} onClick={() => setSongView("lyrics")}><BookOpen size={16}/> Sobre a música</button>
               <button type="button" role="tab" aria-selected={songView === "chords"} className={songView === "chords" ? "is-active" : ""} onClick={() => setSongView("chords")}><Music2 size={16}/> Cifras e acordes</button>
             </div>
-            {songView === "lyrics" ? <><h2>Letra de {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}>{loading ? "Carregando letra..." : lyrics.text}</div><small className="reference-rights-note">As letras são exibidas somente quando disponíveis no provedor consultado.</small></> : <div className="reference-chords-panel">
+            {songView === "lyrics" ? <><h2>Sobre {lyrics.title}</h2><div className="reference-lyrics-text" style={{fontSize:`calc(14px * ${fontScale})`}}> {lyrics.text} </div><small className="reference-rights-note">Respeitamos os direitos autorais. O Versos Musicais apresenta informações musicais e direciona você às fontes oficiais.</small><p><a href={`https://www.youtube.com/results?search_query=${encodeURIComponent(lyrics.title + " " + lyrics.artist + " oficial")}`} target="_blank" rel="noreferrer">Buscar conteúdo oficial no YouTube <ArrowRight size={14}/></a></p></> : <div className="reference-chords-panel">
               <span className="portal-kicker">PARA QUEM TOCA</span>
               <h2>Cifras de {lyrics.title}</h2>
               <p className="reference-chords-intro">Escolha o instrumento e veja a cifra aqui mesmo no Som & Letra. Você também pode contribuir com uma cifra para o catálogo interno.</p>
@@ -1005,37 +1005,14 @@ ${item.text}`], { type: "text/plain;charset=utf-8" }); const url = URL.createObj
     setIsPreviewPlaying(false); setPreviewTime(0); setPreviewDuration(0);
     setVideo(null);
     setVideoError("");
-    setLyricsLoading(true);
-    setLyrics({ title: item.title, artist: item.artist, text: "Carregando letra...", previewUrl: item.previewUrl || "" });
-    try {
-      // Try the catalog ID first when it is a numeric LRCLIB ID; otherwise search by title/artist.
-      const isLrclibId = /^\\d+$/.test(String(item.id || ""));
-      let response = null;
-      let data = {};
-      if (isLrclibId) {
-        try {
-          response = await fetch(`/api/lyrics/${encodeURIComponent(item.id)}`);
-          data = await response.json();
-        } catch { /* Fall back to a title/artist search below. */ }
-      }
-      if (!response?.ok || !String(data.lyrics || "").trim()) {
-        response = await fetch(`/api/lyrics/search?title=${encodeURIComponent(item.title)}&artist=${encodeURIComponent(item.artist)}`);
-        data = await response.json();
-      }
-      const text = String(data.lyrics || "").trim();
-      setLyrics({
-        ...item,
-        title: data.trackName || item.title,
-        artist: data.artistName || item.artist,
-        text: text || data.error || (response.status === 503 || response.status === 502
-          ? "O serviço de letras está temporariamente instável. Tente novamente mais tarde."
-          : "Não encontramos a letra desta música nas fontes disponíveis."),
-        previewUrl: item.previewUrl || ""
-      });
-    } catch (error) {
-      setLyrics({ ...item, title: item.title, artist: item.artist, text: "Não foi possível carregar a letra agora. Tente novamente em instantes.", previewUrl: item.previewUrl || "" });
-    }
-    finally { setLyricsLoading(false); }
+    setLyricsLoading(false);
+    setLyrics({
+      ...item,
+      title: item.title,
+      artist: item.artist,
+      text: "As letras completas não são reproduzidas neste site. Consulte a obra em uma plataforma autorizada ou no canal oficial do artista.",
+      previewUrl: item.previewUrl || ""
+    });
   };
 
   const songCatalog = useMemo(() => [...results, ...chart.map((item) => ({...item, title:item.title || item.name, artist:item.artist || item.artistName, artworkUrl:item.artworkUrl || item.artworkUrl100}))], [results, chart]);
