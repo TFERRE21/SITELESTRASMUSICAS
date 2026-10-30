@@ -1234,16 +1234,18 @@ const server = http.createServer(async (req, res) => {
     });
   }
   if (req.method === "GET" && url.pathname === "/api/catalog/sources") {
-    const q = (url.searchParams.get("q") || "").trim().slice(0, 120);
+    const q = (url.searchParams.get("q") || "").trim().slice(0, 180);
     if (!q) return json(res, 400, { error: "Informe o nome da música ou artista no parâmetro q." });
     const encoded = encodeURIComponent(q);
     return json(res, 200, {
       query: q,
       sources: [
+        { name: "Musixmatch", type: "external-search", url: "https://www.musixmatch.com/search/" + encoded, lyricsCopied: false },
         { name: "Letras.mus.br", type: "external-search", url: "https://www.letras.mus.br/?q=" + encoded, lyricsCopied: false },
-        { name: "LRCLIB", type: "internal-provider", url: "/api/catalog?q=" + encoded, lyricsCopied: false }
+        { name: "Genius", type: "external-search", url: "https://genius.com/search?q=" + encoded, lyricsCopied: false },
+        { name: "YouTube Music", type: "external-search", url: "https://music.youtube.com/search?q=" + encoded, lyricsCopied: false }
       ],
-      note: "Letras.mus.br é aberto como busca externa. Este endpoint não raspa nem copia letras; qualquer integração automatizada deve usar API ou autorização oficial da fonte."
+      note: "Os links abrem buscas nas plataformas externas. O Versos Musicais não extrai, copia, armazena ou reproduz letras dessas plataformas. A disponibilidade e os direitos de exibição são regidos pelos termos e licenças de cada serviço."
     });
   }
   if (req.method === "GET" && url.pathname === "/sitemap-musicas.xml") {
@@ -1287,9 +1289,15 @@ const server = http.createServer(async (req, res) => {
       error: "A exibição de letras completas foi desativada para respeitar direitos autorais.",
       provider: null,
       lyrics: null,
-      authorizedAlternatives: [
-        "https://www.youtube.com/results?search_query=" + encodeURIComponent((url.searchParams.get("title") || "") + " " + (url.searchParams.get("artist") || "") + " oficial")
-      ]
+      externalSearches: (() => {
+        const query = encodeURIComponent((url.searchParams.get("title") || "") + " " + (url.searchParams.get("artist") || ""));
+        return [
+          { name: "Musixmatch", url: "https://www.musixmatch.com/search/" + query },
+          { name: "Letras.mus.br", url: "https://www.letras.mus.br/?q=" + query },
+          { name: "Genius", url: "https://genius.com/search?q=" + query },
+          { name: "YouTube Music", url: "https://music.youtube.com/search?q=" + query }
+        ];
+      })()
     });
   }
   if (req.method === "GET" && !url.pathname.startsWith("/api/")) return serveStatic(req, res, url.pathname);
