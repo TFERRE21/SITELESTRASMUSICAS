@@ -279,6 +279,11 @@ async function serveStatic(req, res, pathname) {
   if (!existsSync(filePath)) filePath = path.join(dist, "index.html");
   try {
     let body = await readFile(filePath, "utf8");
+    // Catalog-only song URLs do not yet provide substantial original editorial content.
+    // Keep them navigable for visitors without submitting thin pages to search indexes.
+    if (decoded.startsWith("/musica/") && path.basename(filePath) === "index.html") {
+      body = body.replace(/<meta name="robots" content="[^"]*"\\s*\\/?\\s*>/i, '<meta name="robots" content="noindex,follow">');
+    }
     // Deliver song-specific metadata in the initial HTML so crawlers can identify each song URL.
     if (decoded.startsWith("/musica/") && path.basename(filePath) === "index.html") {
       const slugifySeo = (value) => String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "musica";
@@ -286,8 +291,8 @@ async function serveStatic(req, res, pathname) {
       const item = cachedCatalog.find((song) => slugifySeo(song.title) + "-por-" + slugifySeo(song.artist) === slug);
       if (item) {
         const escapeHtml = (value) => String(value || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-        const title = "Versos Musicais | Letra de " + String(item.title || "Música") + " — " + String(item.artist || "Artista");
-        const description = "Conheça " + String(item.title || "esta música") + ", de " + String(item.artist || "este artista") + ", no Versos Musicais. Consulte informações da faixa e verifique a disponibilidade da letra.";
+        const title = "Versos Musicais | " + String(item.title || "Música") + " — " + String(item.artist || "Artista");
+        const description = "Conheça " + String(item.title || "esta música") + ", de " + String(item.artist || "este artista") + ", no catálogo do Versos Musicais.";
         const canonical = "https://versosmusicais.com.br/musica/" + slug;
         body = body
           .replace(/<title>[^<]*<\/title>/i, "<title>" + escapeHtml(title) + "</title>")
