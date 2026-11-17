@@ -7,4 +7,8 @@
   <url><loc>https://versosmusicais.com.br/playlists</loc><changefreq>weekly</changefreq><priority>0.7</priority></url>
   <url><loc>https://versosmusicais.com.br/em-alta</loc><changefreq>daily</changefreq><priority>0.8</priority></url>
   <url><loc>https://versosmusicais.com.br/generos</loc><changefreq>weekly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://versosmusicais.com.br/guias/</loc><changefreq>monthly</changefreq><priority>0.9</priority></url>
+  <url><loc>https://versosmusicais.com.br/guias/como-descobrir-novas-musicas.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://versosmusicais.com.br/guias/guia-de-generos-musicais-brasileiros.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
+  <url><loc>https://versosmusicais.com.br/guias/como-conhecer-melhor-um-artista.html</loc><changefreq>monthly</changefreq><priority>0.8</priority></url>
 </urlset>
